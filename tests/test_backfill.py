@@ -48,6 +48,16 @@ class CcdcIssuesTests(unittest.TestCase):
         self.assertTrue(any("2026_29" in n for n in c.notes))
         self.assertEqual(sleeps, [6])   # 两次请求之间按配置间隔
 
+    def test_item_without_date_is_kept(self):
+        src = source_cfg("cdc_weekly")
+        body = fixture("cdc_weekly_2026_28.xml").replace(b"<prism:publicationDate>2026-07-10</prism:publicationDate>",
+                                                          b"<prism:publicationDate></prism:publicationDate>", 1)
+        body = body.replace(b"<dc:date>2026-07-10</dc:date>", b"<dc:date></dc:date>", 1)
+        http = FakeHttp({"https://weekly.chinacdc.cn/rss/2026_28.xml": body})
+        recs = collect(bf.bf_ccdc_issues(src, ctx(http, "2026-01-01"), {"year": 2026, "issues": "28"}))
+        self.assertEqual(len(recs), 5)
+        self.assertEqual(sum(r["published_at"] is None for r in recs), 1)
+
     def test_wrong_issue_metadata_dropped(self):
         src = source_cfg("cdc_weekly")
         http = FakeHttp({"https://weekly.chinacdc.cn/rss/2026_30.xml": fixture("cdc_weekly_2026_28.xml")})

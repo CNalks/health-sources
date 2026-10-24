@@ -88,7 +88,9 @@ def bf_ccdc_issues(src: dict, ctx: Ctx, opts: dict) -> Iterator[Batch]:
         if not recs:
             ctx.notes.append(f"{year}_{n}: feed has no items")
             continue
-        wrong = [r for r in recs if r["issue"] != str(n) or not (r["published_at"] or "").startswith(str(year))]
+        # 期号必须对上；日期为空的条目（官网 feed 偶有，如法定传染病月报）保留，不推测日期
+        wrong = [r for r in recs if r["issue"] != str(n)
+                 or (r["published_at"] and not r["published_at"].startswith(str(year)))]
         if wrong:
             ctx.notes.append(f"{year}_{n}: {len(wrong)} item(s) carry other issue metadata, dropped")
             recs = [r for r in recs if r not in wrong]
