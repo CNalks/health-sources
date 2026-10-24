@@ -1,5 +1,5 @@
-"""采集主流程：逐个来源抓取 → 校验 → 写 SQLite → 导出当日快照。
-任何一个来源失败都不影响其他来源：失败来源沿用上次数据并标为 stale。"""
+"""采集主流程：清理已停用来源 → 逐个来源抓取 → 校验 → 写 SQLite → 按 DOI 回查补全 → 导出当日快照。
+任何一个来源失败都不影响其他来源：失败来源沿用上次数据并标为 stale。补全步骤失败也不影响采集和导出。"""
 from __future__ import annotations
 
 import json
@@ -11,6 +11,7 @@ from pathlib import Path
 
 import yaml
 
+from . import enrich as enrich_mod
 from .adapters import ADAPTERS
 from .http import Http
 from .schema import validate
@@ -36,7 +37,44 @@ def load_config(path: str | Path) -> dict:
             raise ValueError(f"bad kind for {src['id']}")
         for k, v in defaults.items():
             src.setdefault(k, v)
+    retired = cfg.get("retired_sources") or []
+    if ids & set(retired):
+        raise ValueError(f"source listed as both active and retired: {sorted(ids & set(retired))}")
     return cfg
+
+
+def purge_retired(cfg: dict, store: Store) -> dict[str, int]:
+    """已停用来源（sources.yaml 的 retired_sources）：删除库里的记录，不再导出。"""
+    out = {}
+    for sid in cfg.get("retired_sources") or []:
+        n = store.purge_source(sid)
+        if n:
+            log.info("retired source %s: deleted %d records", sid, n)
+        out[sid] = n
+    return out
+
+
+def backfill_dois(cfg: dict, store: Store) -> dict:
+    """旧记录（如 v0.1 时 MMWR 提前发布 / 增刊没推出 DOI）补 DOI，避免同一篇按 URL、按 DOI 各算一条。"""
+    from .util import doi_from_url
+    ids = [s["id"] for s in cfg["sources"] if s["kind"] == "article" and s.get("doi_from_url", True)
+           and s.get("id_from") != "url"]
+    out = store.backfill_dois(ids, doi_from_url)
+    if out["rekeyed"] or out["merged"]:
+        log.info("backfilled DOIs from URL: %s", out)
+    return out
+
+
+def run_enrich(cfg: dict, store: Store, now: str, http: Http | None = None, only: list[str] | None = None) -> dict:
+    conf = {**enrich_mod.DEFAULTS, **(cfg.get("enrich") or {})}
+    d = cfg.get("defaults", {})
+    http = http or Http(d.get("user_agent", "health-sources/0.1"), conf.get("timeout", 20), conf.get("retries", 1))
+    sources = {s["id"]: s for s in cfg["sources"] if not only or s["id"] in only}
+    try:
+        return enrich_mod.run(store, http, conf, sources, now)
+    except Exception as exc:  # noqa: BLE001 —— 补全失败不影响主流程
+        log.warning("enrich step FAILED: %s: %s", type(exc).__name__, exc)
+        return {"enabled": True, "error": f"{type(exc).__name__}: {exc}"}
 
 
 def collect_source(src: dict, http: Http, store: Store, now: str) -> dict:
@@ -82,7 +120,8 @@ def _atomic_write(path: Path, text: str) -> None:
     os.replace(tmp, path)
 
 
-def export(store: Store, data_dir: Path, window_days: int = 30, keep_days: int = 90, results: list | None = None) -> dict:
+def export(store: Store, data_dir: Path, window_days: int = 30, keep_days: int = 90, results: list | None = None,
+           enrich_stats: dict | None = None, retired: dict | None = None) -> dict:
     now = datetime.now(timezone.utc)
     since = (now - timedelta(days=window_days)).isoformat()
     records = store.records(since=since)
@@ -98,6 +137,9 @@ def export(store: Store, data_dir: Path, window_days: int = 30, keep_days: int =
         "sources": store.source_summary(),
         "runs": store.source_runs(),
         "last_run": results or [],
+        "last_enrich": enrich_stats or {},
+        "enrich_attempts": store.enrich_summary(),
+        "retired_sources": retired or {},
     }
     _atomic_write(data_dir / "status.json", json.dumps(status, ensure_ascii=False, indent=2) + "\n")
     cutoff = (now - timedelta(days=keep_days)).astimezone(BEIJING).date().isoformat()
@@ -107,7 +149,8 @@ def export(store: Store, data_dir: Path, window_days: int = 30, keep_days: int =
     return status
 
 
-def run(config_path: str | Path, data_dir: str | Path, only: list[str] | None = None) -> list[dict]:
+def run(config_path: str | Path, data_dir: str | Path, only: list[str] | None = None,
+        do_enrich: bool = True, enrich_http: Http | None = None) -> list[dict]:
     cfg = load_config(config_path)
     data_dir = Path(data_dir)
     d = cfg.get("defaults", {})
@@ -116,11 +159,14 @@ def run(config_path: str | Path, data_dir: str | Path, only: list[str] | None = 
     now = now_iso()
     results = []
     try:
+        retired = purge_retired(cfg, store)
+        backfill_dois(cfg, store)
         for src in cfg["sources"]:
             if only and src["id"] not in only:
                 continue
             results.append(collect_source(src, http, store, now))
-        export(store, data_dir, results=results)
+        enrich_stats = run_enrich(cfg, store, now, enrich_http, only) if do_enrich else {"enabled": False}
+        export(store, data_dir, results=results, enrich_stats=enrich_stats, retired=retired)
     finally:
         store.close()
     return results

@@ -1,0 +1,155 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<rdf:RDF xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#" xmlns:prism="http://prismstandard.org/namespaces/basic/2.0/" xmlns:dc="http://purl.org/dc/elements/1.1/" xmlns:syn="http://purl.org/rss/1.0/modules/syndication/" xmlns:content="http://purl.org/rss/1.0/modules/content/" xmlns="http://purl.org/rss/1.0/">
+  <channel rdf:about="https://weekly.chinacdc.cn/">
+    <title>China CDC Weekly</title>
+    <link>https://weekly.chinacdc.cn/</link>
+    <description>China CDC Weekly</description>
+    <syn:updatePeriod>day</syn:updatePeriod>
+    <syn:updateFrequency>15</syn:updateFrequency>
+    <syn:updateBase>2026-10-25 04:04:14</syn:updateBase>
+    <dc:creator><a href="mailto:cdcwjournal@163.com">cdcwjournal@163.com</a></dc:creator>
+    <dc:publisher><a href="mailto:cdcwjournal@163.com">cdcwjournal@163.com</a></dc:publisher>
+    <dc:date>2026-10-25 04:04:14</dc:date>
+    <dc:language>en</dc:language>
+	<dc:rights>Copyright © 2026 by Chinese Center for Disease Control and Prevention &amp; Chinese Academy of Preventive Medicine</dc:rights>
+    <prism:copyright>Copyright © 2026 by Chinese Center for Disease Control and Prevention &amp; Chinese Academy of Preventive Medicine</prism:copyright>
+    <prism:rightsAgent><a href="mailto:cdcwjournal@163.com">cdcwjournal@163.com</a></prism:rightsAgent>
+    <prism:issn>2096-7071</prism:issn>
+    <items>
+		<rdf:Seq>
+<rdf:li rdf:resource="https://weekly.chinacdc.cn/article/doi/10.46234/ccdcw2026.213"/>
+<rdf:li rdf:resource="https://weekly.chinacdc.cn/article/doi/10.46234/ccdcw2026.214"/>
+<rdf:li rdf:resource="https://weekly.chinacdc.cn/article/doi/10.46234/ccdcw2026.215"/>
+<rdf:li rdf:resource="https://weekly.chinacdc.cn/article/doi/10.46234/ccdcw2026.216"/>
+		</rdf:Seq>
+    </items>
+  </channel>
+  <item rdf:about="https://weekly.chinacdc.cn/article/doi/10.46234/ccdcw2026.213">
+    <title><![CDATA[Childhood Varicella Vaccination and Herpes Zoster Risk — Chaoyang District, Beijing, China, 2010–2025]]></title>
+<link>https://weekly.chinacdc.cn/article/doi/10.46234/ccdcw2026.213</link>
+    <description>
+		<![CDATA[
+			
+			&lt;br/&gt;&lt;p&gt;&lt;/p&gt;
+			&lt;br/&gt;China CDC Weekly. 2026 8(43): 1313-1318. Published 2026-10-23
+		]]>
+	</description>
+    <content:encoded>
+		<![CDATA[
+			
+			&lt;br/&gt;&lt;p&gt;&lt;/p&gt;
+			&lt;br/&gt;China CDC Weekly. 2026 8(43): 1313-1318. Published 2026-10-23
+		]]>
+	</content:encoded>
+    <dc:title><![CDATA[Childhood Varicella Vaccination and Herpes Zoster Risk — Chaoyang District, Beijing, China, 2010–2025]]></dc:title>
+    <dc:creator><![CDATA[]]></dc:creator>
+    <dc:date>2026-10-23</dc:date>
+    <dc:rights>Personal use only, all commercial or other reuse prohibited</dc:rights>
+    <dc:source>China CDC Weekly. 2026 8(43): 1313-1318.</dc:source>
+    <dc:type>article</dc:type>
+    <dc:identifier>doi:10.46234/ccdcw2026.213</dc:identifier>
+    <prism:doi>10.46234/ccdcw2026.213</prism:doi>
+    <prism:publicationName>China CDC Weekly</prism:publicationName>
+    <prism:volume>8</prism:volume>
+    <prism:number>43</prism:number>
+    <prism:publicationDate>2026-10-23</prism:publicationDate>
+<prism:url>https://weekly.chinacdc.cn/article/doi/10.46234/ccdcw2026.213</prism:url>
+	<prism:startingPage>1313-1318</prism:startingPage>
+  </item>
+  <item rdf:about="https://weekly.chinacdc.cn/article/doi/10.46234/ccdcw2026.214">
+    <title><![CDATA[Epidemiologic Characteristics and Spatial Dynamics of Severe Fever with Thrombocytopenia Syndrome in a High-Incidence Region — China, 2015–2024]]></title>
+<link>https://weekly.chinacdc.cn/article/doi/10.46234/ccdcw2026.214</link>
+    <description>
+		<![CDATA[
+			
+			&lt;br/&gt;&lt;p&gt;&lt;/p&gt;
+			&lt;br/&gt;China CDC Weekly. 2026 8(43): 1319-1323. Published 2026-10-23
+		]]>
+	</description>
+    <content:encoded>
+		<![CDATA[
+			
+			&lt;br/&gt;&lt;p&gt;&lt;/p&gt;
+			&lt;br/&gt;China CDC Weekly. 2026 8(43): 1319-1323. Published 2026-10-23
+		]]>
+	</content:encoded>
+    <dc:title><![CDATA[Epidemiologic Characteristics and Spatial Dynamics of Severe Fever with Thrombocytopenia Syndrome in a High-Incidence Region — China, 2015–2024]]></dc:title>
+    <dc:creator><![CDATA[]]></dc:creator>
+    <dc:date>2026-10-23</dc:date>
+    <dc:rights>Personal use only, all commercial or other reuse prohibited</dc:rights>
+    <dc:source>China CDC Weekly. 2026 8(43): 1319-1323.</dc:source>
+    <dc:type>article</dc:type>
+    <dc:identifier>doi:10.46234/ccdcw2026.214</dc:identifier>
+    <prism:doi>10.46234/ccdcw2026.214</prism:doi>
+    <prism:publicationName>China CDC Weekly</prism:publicationName>
+    <prism:volume>8</prism:volume>
+    <prism:number>43</prism:number>
+    <prism:publicationDate>2026-10-23</prism:publicationDate>
+<prism:url>https://weekly.chinacdc.cn/article/doi/10.46234/ccdcw2026.214</prism:url>
+	<prism:startingPage>1319-1323</prism:startingPage>
+  </item>
+  <item rdf:about="https://weekly.chinacdc.cn/article/doi/10.46234/ccdcw2026.215">
+    <title><![CDATA[Spatiotemporal Epidemiology of Echinococcosis in an Oasis Ecosystem — Xinyuan County, Xinjiang Uygur Autonomous Region, China, 2004–2025]]></title>
+<link>https://weekly.chinacdc.cn/article/doi/10.46234/ccdcw2026.215</link>
+    <description>
+		<![CDATA[
+			
+			&lt;br/&gt;&lt;p&gt;&lt;/p&gt;
+			&lt;br/&gt;China CDC Weekly. 2026 8(43): 1324-1329. Published 2026-10-23
+		]]>
+	</description>
+    <content:encoded>
+		<![CDATA[
+			
+			&lt;br/&gt;&lt;p&gt;&lt;/p&gt;
+			&lt;br/&gt;China CDC Weekly. 2026 8(43): 1324-1329. Published 2026-10-23
+		]]>
+	</content:encoded>
+    <dc:title><![CDATA[Spatiotemporal Epidemiology of Echinococcosis in an Oasis Ecosystem — Xinyuan County, Xinjiang Uygur Autonomous Region, China, 2004–2025]]></dc:title>
+    <dc:creator><![CDATA[]]></dc:creator>
+    <dc:date>2026-10-23</dc:date>
+    <dc:rights>Personal use only, all commercial or other reuse prohibited</dc:rights>
+    <dc:source>China CDC Weekly. 2026 8(43): 1324-1329.</dc:source>
+    <dc:type>article</dc:type>
+    <dc:identifier>doi:10.46234/ccdcw2026.215</dc:identifier>
+    <prism:doi>10.46234/ccdcw2026.215</prism:doi>
+    <prism:publicationName>China CDC Weekly</prism:publicationName>
+    <prism:volume>8</prism:volume>
+    <prism:number>43</prism:number>
+    <prism:publicationDate>2026-10-23</prism:publicationDate>
+<prism:url>https://weekly.chinacdc.cn/article/doi/10.46234/ccdcw2026.215</prism:url>
+	<prism:startingPage>1324-1329</prism:startingPage>
+  </item>
+  <item rdf:about="https://weekly.chinacdc.cn/article/doi/10.46234/ccdcw2026.216">
+    <title><![CDATA[An Outbreak of Dengue Fever — Wuzhou City, Guangxi Zhuang Autonomous Region, China, June 2026]]></title>
+<link>https://weekly.chinacdc.cn/article/doi/10.46234/ccdcw2026.216</link>
+    <description>
+		<![CDATA[
+			
+			&lt;br/&gt;&lt;p&gt;&lt;/p&gt;
+			&lt;br/&gt;China CDC Weekly. 2026 8(43): 1330-1331. Published 2026-10-23
+		]]>
+	</description>
+    <content:encoded>
+		<![CDATA[
+			
+			&lt;br/&gt;&lt;p&gt;&lt;/p&gt;
+			&lt;br/&gt;China CDC Weekly. 2026 8(43): 1330-1331. Published 2026-10-23
+		]]>
+	</content:encoded>
+    <dc:title><![CDATA[An Outbreak of Dengue Fever — Wuzhou City, Guangxi Zhuang Autonomous Region, China, June 2026]]></dc:title>
+    <dc:creator><![CDATA[]]></dc:creator>
+    <dc:date>2026-10-23</dc:date>
+    <dc:rights>Personal use only, all commercial or other reuse prohibited</dc:rights>
+    <dc:source>China CDC Weekly. 2026 8(43): 1330-1331.</dc:source>
+    <dc:type>article</dc:type>
+    <dc:identifier>doi:10.46234/ccdcw2026.216</dc:identifier>
+    <prism:doi>10.46234/ccdcw2026.216</prism:doi>
+    <prism:publicationName>China CDC Weekly</prism:publicationName>
+    <prism:volume>8</prism:volume>
+    <prism:number>43</prism:number>
+    <prism:publicationDate>2026-10-23</prism:publicationDate>
+<prism:url>https://weekly.chinacdc.cn/article/doi/10.46234/ccdcw2026.216</prism:url>
+	<prism:startingPage>1330-1331</prism:startingPage>
+  </item>
+</rdf:RDF>

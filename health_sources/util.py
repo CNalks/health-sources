@@ -51,7 +51,8 @@ def doi_from_url(url: str) -> str | None:
         vol, issue, yy, num = m.groups()
         return f"10.3201/eid{vol}{int(issue):02d}.{yy}{num}"
     # MMWR: /mmwr/volumes/75/wr/mm7541a2.htm -> 10.15585/mmwr.mm7541a2
-    m = re.search(r"/mmwr/volumes/\d+/\w+/((mm|rr|ss)\d{4}a\d+)\.htm", url)
+    # 也包括提前发布（mm7540e1）和增刊（su7501a6），两者在 doi.org 上都能解析
+    m = re.search(r"/mmwr/volumes/\d+/\w+/((mm|rr|ss|su)\d{4}[ae]\d+)\.htm", url)
     if m:
         return f"10.15585/mmwr.{m.group(1)}"
     return None

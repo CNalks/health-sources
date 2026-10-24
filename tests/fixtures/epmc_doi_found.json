@@ -1,0 +1,43 @@
+{
+ "version": "6.9",
+ "hitCount": 2,
+ "resultList": {
+  "result": [
+   {
+    "id": "PMC13673392",
+    "source": "PMC",
+    "pmcid": "PMC13673392",
+    "title": "Genomic Epidemiology and Antimicrobial Susceptibility of Human Brucellosis — Shenzhen City, Guangdong Province, China, 2005–2024",
+    "license": "cc by-nc",
+    "keywordList": {
+     "keyword": [
+      "Brucellosis",
+      "Brucella Melitensis",
+      "Antimicrobial Susceptibility",
+      "Genomic Epidemiology"
+     ]
+    },
+    "firstPublicationDate": "2026-10-02",
+    "isOpenAccess": "Y"
+   },
+   {
+    "id": "42891138",
+    "source": "MED",
+    "doi": "10.46234/ccdcw2026.200",
+    "title": "Genomic Epidemiology and Antimicrobial Susceptibility of Human Brucellosis - Shenzhen City, Guangdong Province, China, 2005-2024.",
+    "abstractText": "<h4>What is already known about this topic?</h4>Brucellosis is a zoonotic disease historically concentrated in pastoral regions of China; however, an increasing number of cases have been reported in large urban centers in recent years.<h4>What is added by this report?</h4>Analysis of 191 human-derived Brucella isolates collected in Shenzhen between 2005 and 2024 showed that Brucella melitensis predominated and that Shenzhen isolates were interspersed with strains from multiple provinces, suggesting repeated introductions from other regions. Most cases occurred in working-age adults, and both i",
+    "license": "cc by-nc",
+    "keywordList": {
+     "keyword": [
+      "Brucellosis",
+      "Brucella Melitensis",
+      "Antimicrobial Susceptibility",
+      "Genomic Epidemiology"
+     ]
+    },
+    "firstPublicationDate": "2026-10-01",
+    "isOpenAccess": "N"
+   }
+  ]
+ }
+}

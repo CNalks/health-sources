@@ -8,6 +8,10 @@
 
 当前阶段只做到「采集并写文件试跑」，**没有接任何下游**。
 
+**发现靠各刊 RSS，补全靠 Europe PMC 按 DOI 回查。** 新文章只从各刊/各机构自己的 RSS（或官方接口）发现；
+Europe PMC 不再作为独立来源广撒网，只在「补全」步骤里按 DOI 逐篇回查，给缺摘要、缺许可的文章补上摘要、许可、PMCID 和关键词。
+这样同一篇文章不会因为既出现在期刊 RSS、又出现在 Europe PMC 检索结果里而算两条。
+
 ## 定位与边界
 
 - 只收两类：`article`（期刊文章）和 `news`（新闻/通报）。
@@ -15,7 +19,7 @@
 - 字典只有「统一字段 + 关键词」：不做病种词表、国家词表、ICD 编码。
 - 不调大模型：关键词优先用原文自带的期刊关键词 / RSS category，没有就从标题按规则提取。
 
-## 第一批来源（`sources.yaml`）
+## 来源（`sources.yaml`）
 
 | id | 来源 | kind | 方式 | license | figures_allowed |
 |---|---|---|---|---|---|
@@ -25,9 +29,14 @@
 | `eid` | Emerging Infectious Diseases（提前在线） | article | RSS | Public Domain | true |
 | `ecdc` | ECDC：CDTR / 风险评估 / 疫情更新 / 新闻 | news | 4 个 RSS 子 feed | 注明出处即可转载 | true |
 | `plos_ntds` | PLOS NTDs | article | Atom | CC BY 4.0 | true |
-| `europepmc` | Europe PMC（最近 7 天、开放获取、公卫/传染病检索式） | article | REST search | 按每篇许可 | 仅 CC0 / CC BY / CC BY-SA 为 true |
+| `cdc_weekly` | China CDC Weekly（当期） | article | RSS 1.0/RDF，条目自带 `<prism:doi>`；feed 无摘要，靠补全 | CC BY-NC 4.0 | false |
 
-`license`、`figures_allowed` 在 `sources.yaml` 里按来源设定；Europe PMC 为 `per_record`，按每篇文章自己的许可判断。
+`license`、`figures_allowed` 在 `sources.yaml` 里按来源设定。来源也可以设 `figures_allowed: per_record`，
+这时补全步骤会按 Europe PMC 给出的单篇许可重算（只有 CC0 / CC BY / CC BY-SA 为 true）；目前没有来源用这个选项。
+
+CDC Weekly 只读订阅官网 RSS，**不抓文章页面**（官网会弹验证码）；公卫前沿自己的采集流程（火山云 cdc-ingest）与本项目无关、互不影响。
+
+已停用：`europepmc`（v0.1 按检索式广泛抓取，与逐刊订阅重复）。它列在 `retired_sources` 里，每次运行开始时删除库里它的旧记录，不再导出。
 
 ## 统一字段
 
@@ -35,27 +44,47 @@
 
 | 字段 | 类型 | 说明 |
 |---|---|---|
-| `id` | string | 16 位十六进制。有 DOI 时为 `sha1("doi:"+小写DOI)`，否则为 `sha1("url:"+规范化URL)` 的前 16 位。Europe PMC 固定用 URL（`europepmc.org/article/PMC/<PMCID>`），避免 DOI 晚到导致同一篇变两条 |
+| `id` | string | 16 位十六进制。有 DOI 时为 `sha1("doi:"+小写DOI)`，否则为 `sha1("url:"+规范化URL)` 的前 16 位 |
 | `source` | string | 来源 id，见上表 |
 | `kind` | `article` \| `news` | |
 | `title` | string | 去掉 HTML 标签后的原文标题 |
 | `lang` | string | ISO 639-1，目前都是 `en` |
 | `published_at` | string \| null | ISO 8601，带时区（统一为 UTC `+00:00`） |
 | `url` | string | 规范化 URL：小写域名、去掉 `utm_*`/`TRACK`/`s_cid` 等跟踪参数和锚点 |
-| `doi` | string \| null | 小写 DOI；MMWR、EID 由 URL 规则推出 |
+| `doi` | string \| null | 小写 DOI。优先用条目自带的（`<prism:doi>`、`<dc:identifier>`、DOI 形式的 id），否则由 URL 推出：MMWR（含提前发布 `mm7540e1`、增刊 `su7501a6`）、EID、Eurosurveillance、PLOS；推不出就为 null，也就不参加补全 |
 | `summary` | string \| null | 纯文本摘要，最长约 1200 字符；feed 没有摘要时为 null |
 | `keywords` | string[] | 优先原文关键词 / RSS category（最多 6 个）；没有则从标题提取 3–5 个短语（标题太短时可能更少） |
 | `license` | string \| null | 许可说明 |
 | `figures_allowed` | bool | 下游能否配原文图表 |
 | `fetched_at` | string | 最近一次成功抓到这条记录的时间（UTC） |
 | `status` | `ok` \| `stale` | `stale` 表示该来源最近一次抓取失败，这条是沿用的旧数据 |
+| `pmcid` | string \| null | Europe PMC / PMC 的 PMCID（如 `PMC13674758`），由补全步骤填写 |
+| `enriched_at` | string \| null | 最近一次补全写入字段的时间（UTC）；从没补过为 null |
+| `enrich_source` | string \| null | 补全数据来自哪里，目前只有 `europepmc`；与 `enriched_at` 同时为空或同时有值 |
 
 ### 关键词规则
 
-1. 原文自带：Europe PMC 的 `keywordList`、RSS/Atom 的 `<category>`、ECDC 子 feed 栏目名（如 `Risk assessment`）。
+1. 原文自带：RSS/Atom 的 `<category>`、ECDC 子 feed 栏目名（如 `Risk assessment`）、补全时 Europe PMC 的 `keywordList`。
    每个来源可用 `ignore_categories` 去掉无意义的通用分类（如 MMWR 的 `MMWR`）。
 2. 否则从标题提取：用停用词表（含月份、"United States" 等）和标点把标题切成短语，
    按精简版 RAKE 打分取前 3–5 个，丢掉年份、日期区间等数字。代码在 `health_sources/keywords.py`。
+
+## 补全：按 DOI 回查 Europe PMC
+
+代码在 `health_sources/enrich.py`，配置在 `sources.yaml` 的 `enrich:`。每次 `run` 在采集完、导出前执行一次：
+
+- **谁会被回查**：`kind=article`、有 DOI、`summary` 或 `license` 为空，且发布（没有发布时间则按首次见到）在 30 天内的记录。
+- **怎么查**：`GET https://www.ebi.ac.uk/europepmc/webservices/rest/search?query=DOI:"<doi>"&resultType=core`，
+  一篇一个请求。同一 DOI 常有 MED、PMC 两条结果（PMC 那条有时不带 doi 字段），合并取摘要、许可、PMCID、关键词。
+- **只填空字段**：已有的摘要、许可、PMCID 不覆盖，`source` 不改。关键词例外：原来只是从标题自动提取的，才换成原文关键词。
+  补全写过的字段记在库里的 `enriched_fields`，之后 feed 再抓到同一篇也不会把它们改回去。
+- **配图**：只有来源设了 `figures_allowed: per_record` 时，才按单篇许可重算 `figures_allowed`（CC0 / CC BY / CC BY-SA 才允许）。
+- **查不到 / 查到了但还没摘要**：在 `enrich_attempts` 表记一次尝试，20 小时后（即下一次每日运行）再试，
+  发布后 30 天内反复尝试——Europe PMC 收录常比原刊晚 10 天以上。
+- **限流**：每次最多查 `max_per_run`（60）篇，请求间隔 `delay_seconds`（1 秒），整个步骤最多 `max_seconds`（300 秒）；
+  从没试过的优先，其次按发布时间从新到旧。
+- **失败隔离**：单篇请求出错只记一次 `error` 尝试；整个步骤出错只写日志，采集和导出照常完成。
+- 结果写进 `status.json` 的 `last_enrich`（本次统计）和 `enrich_attempts`（累计），每个来源的 `with_summary` / `summary_from_enrich` 也在里面。
 
 ## 存储与输出
 
@@ -68,7 +97,8 @@ exports/YYYY-MM-DD.jsonl  # 每日快照（北京时间日期），保留 90 天
 status.json               # 每个来源的条数、最新日期、stale 数、最近一次成功/失败与错误信息
 ```
 
-更新规则：同一 id 再次抓到时更新内容，但已有的非空字段不会被空值覆盖。
+更新规则：同一 id 再次抓到时更新内容，但已有的非空字段不会被空值覆盖，补全写过的字段也不会被 feed 覆盖。
+旧库（v0.1）启动时自动补列；没有 DOI、但现在能从 URL 推出 DOI 的旧记录会补上 DOI 并换成按 DOI 计算的 id（已有同 DOI 记录则合并）。
 
 ### 失败隔离
 
@@ -87,6 +117,10 @@ python3 -m venv .venv && .venv/bin/pip install -r requirements.txt
 .venv/bin/python -m health_sources --data-dir ./data run --only who_don ecdc
 # 只从 SQLite 重新导出
 .venv/bin/python -m health_sources --data-dir ./data export
+# 只跑补全（按 DOI 回查 Europe PMC），然后重新导出
+.venv/bin/python -m health_sources --data-dir ./data enrich
+# 采集但跳过补全
+.venv/bin/python -m health_sources --data-dir ./data run --no-enrich
 # 校验 latest.jsonl 每条记录
 .venv/bin/python -m health_sources --data-dir ./data validate
 ```

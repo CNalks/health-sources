@@ -23,10 +23,14 @@ FIELDS: dict[str, tuple[type | tuple[type, ...], bool]] = {
     "figures_allowed": (bool, False),
     "fetched_at": (str, False),
     "status": (str, False),
+    "pmcid": (str, True),
+    "enriched_at": (str, True),
+    "enrich_source": (str, True),
 }
 
 _ID_RE = re.compile(r"^[0-9a-f]{16}$")
 _DOI_RE = re.compile(r"^10\.\d{4,9}/\S+$")
+_PMCID_RE = re.compile(r"^PMC\d+$")
 
 
 def _is_iso_with_tz(value: str) -> bool:
@@ -71,7 +75,11 @@ def validate(record: dict) -> list[str]:
         errors.append("url must be http(s)")
     if record["doi"] is not None and not _DOI_RE.match(record["doi"]):
         errors.append("doi malformed")
-    for name in ("published_at", "fetched_at"):
+    if record["pmcid"] is not None and not _PMCID_RE.match(record["pmcid"]):
+        errors.append("pmcid must look like PMC123")
+    if (record["enriched_at"] is None) != (record["enrich_source"] is None):
+        errors.append("enriched_at and enrich_source must be set together")
+    for name in ("published_at", "fetched_at", "enriched_at"):
         if record[name] is not None and not _is_iso_with_tz(record[name]):
             errors.append(f"{name} must be ISO 8601 with timezone")
     kws = record["keywords"]

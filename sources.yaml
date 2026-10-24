@@ -1,9 +1,26 @@
 # 来源清单：每个来源一个适配器（adapter），license / figures_allowed 按来源设定。
-# Europe PMC 例外：license 与 figures_allowed 按每篇文章自己的许可判断（per_record）。
+# 发现靠各刊自己的 RSS；Europe PMC 不再是来源，只在 enrich 步骤里按 DOI 回查补摘要/许可/PMCID/关键词。
 defaults:
   timeout: 40          # 秒
   retries: 2
-  user_agent: "health-sources/0.1 (+https://github.com/CNalks/health-sources)"
+  user_agent: "health-sources/0.2 (+https://github.com/CNalks/health-sources)"
+
+# 已停用的来源：每次运行开始时删除库里它们的记录（不再导出）
+retired_sources:
+  - europepmc     # v0.1 曾按检索式广泛抓取，和逐刊订阅重复，已改为下面 enrich 的按 DOI 回查
+
+# 补全：kind=article 且有 DOI、摘要或许可为空的记录，按 DOI 回查 Europe PMC，只填空字段
+enrich:
+  enabled: true
+  url: "https://www.ebi.ac.uk/europepmc/webservices/rest/search"
+  max_per_run: 60        # 每次运行最多查几篇
+  delay_seconds: 1.0     # 请求间隔
+  timeout: 20
+  retries: 1
+  window_days: 30        # 发布后 30 天内反复尝试（Europe PMC 收录可能晚 10 天以上）
+  retry_after_hours: 20  # 查不到 / 仍缺摘要：隔天再试
+  max_seconds: 300       # 整个步骤的时间预算
+  figures_allowed_licenses: ["cc0", "cc by", "cc by-sa"]   # 仅对 figures_allowed: per_record 的来源生效
 
 sources:
   - id: mmwr
@@ -81,21 +98,14 @@ sources:
     license: "CC BY 4.0"
     figures_allowed: true
 
-  - id: europepmc
-    name: "Europe PMC (open access, public health / infectious disease)"
-    adapter: europepmc
+  - id: cdc_weekly
+    name: "China CDC Weekly (current issue)"
+    adapter: rss           # RSS 1.0 / RDF，条目自带 <prism:doi>
     kind: article
-    id_from: url           # 用 europepmc.org/article/PMC/<PMCID> 做 id，DOI 晚到也不重复
     lang: en
-    url: "https://www.ebi.ac.uk/europepmc/webservices/rest/search"
-    days: 7                # 只取最近几天首发、开放获取的文章
-    page_size: 100
-    # 只要 MED/PMC：排除预印本（PPR）和书籍章节（NBK）
-    query: >-
-      (TITLE:outbreak OR TITLE:surveillance OR TITLE:epidemic OR TITLE:pandemic
-      OR TITLE:"public health" OR TITLE:"infectious disease" OR TITLE:transmission
-      OR TITLE:vaccination OR TITLE:"emerging infection")
-      AND OPEN_ACCESS:y AND (SRC:MED OR SRC:PMC)
-    license: per_record
-    figures_allowed: per_record
-    figures_allowed_licenses: ["cc0", "cc by", "cc by-sa"]   # 含 NC / ND 的不配图
+    url: "https://weekly.chinacdc.cn/rss/current.xml"
+    max_items: 50
+    feed_summary: false    # feed 描述只有卷期页码，不是摘要；摘要靠 enrich 按 DOI 回查
+    # 只读订阅 RSS，不抓文章页面（官网会弹验证码）；公卫前沿自己的采集（火山云 cdc-ingest）不受影响
+    license: "CC BY-NC 4.0"
+    figures_allowed: false

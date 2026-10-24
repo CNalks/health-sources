@@ -1,6 +1,6 @@
 import unittest
 
-from health_sources.adapters import europepmc, mmwr, rss, who_don
+from health_sources.adapters import mmwr, rss, who_don
 from health_sources.schema import validate
 from tests.helpers import NOW, FakeHttp, fixture, source_cfg
 
@@ -88,28 +88,28 @@ class AdapterTests(unittest.TestCase):
         self.assertIn("IGO", r["license"])
         self.assertIn("-", r["title"])  # OverrideTitle 优先
 
-    def test_europepmc_per_record_license(self):
-        cfg = source_cfg("europepmc")
-        recs = europepmc.parse(fixture("europepmc.json"), cfg, NOW)
-        self.assertEqual(len(recs), 3)
+    def test_cdc_weekly_rdf_doi_no_summary(self):
+        cfg = source_cfg("cdc_weekly")
+        recs = rss.parse(fixture("cdc_weekly.xml"), cfg, NOW)
+        self.assertEqual(len(recs), 4)
         self.assertAllValid(recs)
-        self.assertEqual(recs[0]["license"], "CC BY")
-        self.assertTrue(recs[0]["figures_allowed"])
-        self.assertEqual(recs[0]["keywords"][0], "Outbreak Detection")  # 期刊原有关键词优先
-        self.assertLessEqual(len(recs[0]["keywords"]), 6)
-        self.assertEqual(recs[1]["license"], "CC BY-NC-ND")
-        self.assertFalse(recs[1]["figures_allowed"])
-        self.assertTrue(recs[2]["url"].startswith("https://europepmc.org/article/"))
-        self.assertEqual(recs[2]["doi"], "10.1371/journal.pone.0357183")
-        # 同一篇后来补上 DOI，id 不变
-        from health_sources.util import make_id
-        self.assertEqual(recs[2]["id"], make_id(None, recs[2]["url"]))
-        self.assertNotIn("per_record", [r["license"] for r in recs])
+        r = recs[0]
+        self.assertEqual(r["doi"], "10.46234/ccdcw2026.213")  # 来自 <prism:doi>
+        self.assertEqual(r["url"], "https://weekly.chinacdc.cn/article/doi/10.46234/ccdcw2026.213")
+        self.assertIsNone(r["summary"])  # 卷期页码不当摘要
+        self.assertEqual(r["license"], "CC BY-NC 4.0")
+        self.assertFalse(r["figures_allowed"])
+        self.assertEqual(r["kind"], "article")
+        self.assertEqual(r["published_at"], "2026-10-23T00:00:00+00:00")
+        self.assertIsNone(r["pmcid"])
+        self.assertIsNone(r["enriched_at"])
 
-    def test_europepmc_query_window(self):
-        from datetime import date
-        q = europepmc.build_query({"query": "X", "days": 3}, date(2026, 10, 25))
-        self.assertEqual(q, "(X) AND FIRST_PDATE:[2026-10-22 TO 2026-10-25]")
+    def test_cdc_weekly_only_fetches_rss(self):
+        cfg = source_cfg("cdc_weekly")
+        http = FakeHttp({"https://weekly.chinacdc.cn/rss/current.xml": fixture("cdc_weekly.xml")})
+        recs = rss.fetch(cfg, http, NOW)
+        self.assertEqual(len(recs), 4)
+        self.assertEqual(http.calls, ["https://weekly.chinacdc.cn/rss/current.xml"])  # 不抓文章页面
 
 
 if __name__ == "__main__":

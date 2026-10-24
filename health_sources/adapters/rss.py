@@ -1,11 +1,11 @@
-"""通用 RSS/Atom 适配器：Eurosurveillance、EID、ECDC、PLOS NTDs。"""
+"""通用 RSS/Atom/RDF 适配器：Eurosurveillance、EID、ECDC、PLOS NTDs、CDC Weekly。"""
 from __future__ import annotations
 
 import re
 
 import feedparser
 
-from ..util import doi_from_url, struct_time_to_iso
+from ..util import doi_from_url, normalize_doi, struct_time_to_iso
 from .base import make_record
 
 
@@ -18,6 +18,19 @@ def _summary(entry) -> str | None:
     if re.fullmatch(r"\s*[^<]{0,80}\bet al\.?\s*", text):
         return None
     return text
+
+
+def _entry_doi(entry) -> str | None:
+    """条目自带的 DOI：PRISM <prism:doi>、<dc:identifier>doi:...</dc:identifier>，或 id 本身就是 DOI。"""
+    for value in (entry.get("prism_doi"), entry.get("dc_identifier"), entry.get("id")):
+        if not value:
+            continue
+        value = value.strip()
+        if value.lower().startswith(("10.", "doi:", "https://doi.org/", "http://dx.doi.org/")):
+            doi = normalize_doi(value)
+            if doi:
+                return doi
+    return None
 
 
 def _native_keywords(entry) -> list[str]:
@@ -34,11 +47,8 @@ def parse(payload: bytes, cfg: dict, fetched_at: str, feed_category: str | None 
         title = entry.get("title")
         if not url or not title:
             continue
-        doi = None
-        entry_id = entry.get("id") or ""
-        if entry_id.startswith("10."):
-            doi = entry_id
-        elif cfg.get("doi_from_url", True):
+        doi = _entry_doi(entry)
+        if not doi and cfg.get("doi_from_url", True):
             doi = doi_from_url(url)
         published = struct_time_to_iso(entry.get("published_parsed") or entry.get("updated_parsed"))
         native = _native_keywords(entry)
@@ -49,7 +59,8 @@ def parse(payload: bytes, cfg: dict, fetched_at: str, feed_category: str | None 
             published_at=published,
             fetched_at=fetched_at,
             doi=doi,
-            summary=_summary(entry),
+            # feed_summary: false —— feed 的描述不是摘要（如 CDC Weekly 只有卷期页码），丢弃
+            summary=_summary(entry) if cfg.get("feed_summary", True) else None,
             native_keywords=native,
         )
         if feed_category:

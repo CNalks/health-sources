@@ -14,7 +14,7 @@ def good_record(**over):
         "id": "0123456789abcdef", "source": "x", "kind": "article", "title": "T", "lang": "en",
         "published_at": "2026-10-22T00:00:00+00:00", "url": "https://e.org/a", "doi": None,
         "summary": None, "keywords": ["a"], "license": None, "figures_allowed": False,
-        "fetched_at": NOW, "status": "ok",
+        "fetched_at": NOW, "status": "ok", "pmcid": None, "enriched_at": None, "enrich_source": None,
     }
     rec.update(over)
     return rec
@@ -33,6 +33,9 @@ class SchemaTests(unittest.TestCase):
         r = good_record(); r.pop("title")
         self.assertTrue(validate(r))
         self.assertTrue(validate(good_record(extra=1)))
+        self.assertTrue(validate(good_record(pmcid="123")))
+        self.assertTrue(validate(good_record(enriched_at=NOW)))  # 必须和 enrich_source 一起出现
+        self.assertEqual(validate(good_record(pmcid="PMC1", enriched_at=NOW, enrich_source="europepmc")), [])
 
 
 class UtilTests(unittest.TestCase):
@@ -51,6 +54,11 @@ class UtilTests(unittest.TestCase):
         self.assertEqual(util.doi_from_url("https://wwwnc.cdc.gov/eid/article/32/12/25-1991_article"), "10.3201/eid3212.251991")
         self.assertEqual(util.doi_from_url("https://www.cdc.gov/mmwr/volumes/75/wr/mm7541a2.htm"), "10.15585/mmwr.mm7541a2")
         self.assertEqual(util.normalize_doi("https://doi.org/10.2807/ES.1"), "10.2807/es.1")
+        # MMWR 提前发布和增刊
+        self.assertEqual(util.doi_from_url("https://www.cdc.gov/mmwr/volumes/75/wr/mm7540e1.htm"), "10.15585/mmwr.mm7540e1")
+        self.assertEqual(util.doi_from_url("https://www.cdc.gov/mmwr/volumes/75/su/su7501a6.htm"), "10.15585/mmwr.su7501a6")
+        self.assertIsNone(util.doi_from_url("https://www.cdc.gov/mmwr/index.html"))
+        self.assertIsNone(util.doi_from_url("https://wwwnc.cdc.gov/eid/page/ahead-of-print"))
 
 
 class KeywordTests(unittest.TestCase):
@@ -88,6 +96,28 @@ class StoreTests(unittest.TestCase):
             st.close()
 
 
+class BackfillDoiTests(unittest.TestCase):
+    def test_old_mmwr_records_get_doi_and_merge(self):
+        with tempfile.TemporaryDirectory() as d:
+            st = Store(Path(d) / "db.sqlite")
+            u1 = "https://www.cdc.gov/mmwr/volumes/75/wr/mm7540e1.htm"
+            u2 = "https://www.cdc.gov/mmwr/volumes/75/su/su7501a6.htm"
+            u3 = "https://www.cdc.gov/mmwr/index.html"
+            old = [good_record(id=util.make_id(None, u), url=u, source="mmwr") for u in (u1, u2, u3)]
+            # u2 已经按 DOI 重新抓到过
+            new2 = good_record(id=util.make_id("10.15585/mmwr.su7501a6", u2), url=u2, source="mmwr",
+                               doi="10.15585/mmwr.su7501a6")
+            st.upsert(old + [new2], NOW)
+            out = st.backfill_dois(["mmwr"], util.doi_from_url)
+            self.assertEqual(out, {"rekeyed": 1, "merged": 1})
+            recs = {r["url"]: r for r in st.records()}
+            self.assertEqual(len(recs), 3)
+            self.assertEqual(recs[u1]["doi"], "10.15585/mmwr.mm7540e1")
+            self.assertEqual(recs[u1]["id"], util.make_id("10.15585/mmwr.mm7540e1", u1))
+            self.assertIsNone(recs[u3]["doi"])  # 推不出来就跳过
+            st.close()
+
+
 class RunnerTests(unittest.TestCase):
     def test_failure_isolated_and_stale(self):
         cfg = runner.load_config(ROOT / "sources.yaml")
@@ -119,7 +149,9 @@ class RunnerTests(unittest.TestCase):
     def test_config_loads(self):
         cfg = runner.load_config(ROOT / "sources.yaml")
         ids = [s["id"] for s in cfg["sources"]]
-        self.assertEqual(ids, ["mmwr", "eurosurveillance", "who_don", "eid", "ecdc", "plos_ntds", "europepmc"])
+        self.assertEqual(ids, ["mmwr", "eurosurveillance", "who_don", "eid", "ecdc", "plos_ntds", "cdc_weekly"])
+        self.assertEqual(cfg["retired_sources"], ["europepmc"])
+        self.assertLessEqual(cfg["enrich"]["max_per_run"], 100)
         for s in cfg["sources"]:
             self.assertIn(s["kind"], ("article", "news"))
             self.assertIn("license", s)

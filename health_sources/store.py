@@ -24,7 +24,11 @@ CREATE TABLE IF NOT EXISTS records (
     fetched_at TEXT NOT NULL,
     status TEXT NOT NULL,
     first_seen_at TEXT NOT NULL,
-    updated_at TEXT NOT NULL
+    updated_at TEXT NOT NULL,
+    pmcid TEXT,
+    enriched_at TEXT,
+    enrich_source TEXT,
+    enriched_fields TEXT              -- JSON 数组：由 enrich 写入的字段，之后 feed 再抓到时不覆盖
 );
 CREATE INDEX IF NOT EXISTS idx_records_source ON records(source);
 CREATE INDEX IF NOT EXISTS idx_records_published ON records(published_at);
@@ -37,7 +41,24 @@ CREATE TABLE IF NOT EXISTS source_runs (
     last_count INTEGER,
     warnings TEXT
 );
+-- 按 DOI 回查的尝试记录：查不到/没摘要时隔天再试（发布后 30 天内）
+CREATE TABLE IF NOT EXISTS enrich_attempts (
+    id TEXT PRIMARY KEY,
+    attempts INTEGER NOT NULL,
+    first_attempt_at TEXT NOT NULL,
+    last_attempt_at TEXT NOT NULL,
+    last_result TEXT NOT NULL,       -- filled / partial / found_nothing_new / not_found / error
+    last_error TEXT
+);
 """
+
+# 旧库（v0.1）缺的列：启动时补上
+MIGRATIONS = {
+    "pmcid": "ALTER TABLE records ADD COLUMN pmcid TEXT",
+    "enriched_at": "ALTER TABLE records ADD COLUMN enriched_at TEXT",
+    "enrich_source": "ALTER TABLE records ADD COLUMN enrich_source TEXT",
+    "enriched_fields": "ALTER TABLE records ADD COLUMN enriched_fields TEXT",
+}
 
 CONTENT_FIELDS = [f for f in FIELDS if f not in ("id", "fetched_at", "status")]
 
@@ -48,6 +69,12 @@ class Store:
         self.path.parent.mkdir(parents=True, exist_ok=True)
         self.conn = sqlite3.connect(str(self.path))
         self.conn.row_factory = sqlite3.Row
+        cols = {r[1] for r in self.conn.execute("PRAGMA table_info(records)")}
+        if cols:  # 已有旧表：先补列，再跑建表/建索引（都是 IF NOT EXISTS）
+            with self.conn:
+                for col, sql in MIGRATIONS.items():
+                    if col not in cols:
+                        self.conn.execute(sql)
         self.conn.executescript(SCHEMA)
 
     def close(self) -> None:
@@ -82,9 +109,14 @@ class Store:
                         f"INSERT INTO records ({','.join(cols)}) VALUES ({','.join('?' * len(cols))})", vals
                     )
                     continue
-                changed = any(old[f] != row[f] for f in CONTENT_FIELDS)
-                # 已有的非空字段不被空值覆盖（例如某次 feed 少了摘要）
-                merged = {f: (row[f] if row[f] not in (None, "", "[]") else old[f]) for f in CONTENT_FIELDS}
+                # 已有的非空字段不被空值覆盖（例如某次 feed 少了摘要）；
+                # enrich 写入过的字段也不被 feed 的值覆盖（例如标题提取的关键词顶掉原文关键词）
+                locked = set(json.loads(old["enriched_fields"] or "[]"))
+                merged = {
+                    f: old[f] if f in locked or row[f] in (None, "", "[]") else row[f]
+                    for f in CONTENT_FIELDS
+                }
+                changed = any(old[f] != merged[f] for f in CONTENT_FIELDS)
                 stats["updated" if changed else "unchanged"] += 1
                 sets = ", ".join(f"{f} = ?" for f in CONTENT_FIELDS)
                 self.conn.execute(
@@ -118,6 +150,103 @@ class Store:
             )
             return cur.rowcount
 
+    def purge_source(self, source: str) -> int:
+        """删除已停用来源的全部记录和运行状态；返回删除条数。"""
+        with self.conn:
+            cur = self.conn.execute("DELETE FROM records WHERE source = ?", (source,))
+            self.conn.execute("DELETE FROM source_runs WHERE source = ?", (source,))
+            self.conn.execute("DELETE FROM enrich_attempts WHERE id NOT IN (SELECT id FROM records)")
+            return cur.rowcount
+
+    def backfill_dois(self, sources: list[str], derive) -> dict:
+        """给没有 DOI、但现在能从 URL 推出 DOI 的旧记录补上 DOI，并把 id 换成按 DOI 计算的 id。
+        若按 DOI 的新记录已存在（feed 已重新抓到），删掉旧的那条。返回 {'rekeyed': n, 'merged': n}。"""
+        from .util import make_id
+        out = {"rekeyed": 0, "merged": 0}
+        if not sources:
+            return out
+        marks = ",".join("?" * len(sources))
+        rows = self.conn.execute(
+            f"SELECT id, url FROM records WHERE doi IS NULL AND kind = 'article' AND source IN ({marks})", sources
+        ).fetchall()
+        with self.conn:
+            for row in rows:
+                doi = derive(row["url"])
+                if not doi:
+                    continue
+                new_id = make_id(doi, row["url"])
+                if self.conn.execute("SELECT 1 FROM records WHERE id = ?", (new_id,)).fetchone():
+                    self.conn.execute("DELETE FROM records WHERE id = ?", (row["id"],))
+                    out["merged"] += 1
+                else:
+                    self.conn.execute("UPDATE records SET id = ?, doi = ? WHERE id = ?", (new_id, doi, row["id"]))
+                    out["rekeyed"] += 1
+                self.conn.execute("DELETE FROM enrich_attempts WHERE id = ?", (row["id"],))
+        return out
+
+    # ---- enrich（按 DOI 回查） ----
+
+    def enrich_candidates(self, sources: list[str], since: str, retry_before: str, limit: int) -> list[dict]:
+        """待回查：指定来源的 kind=article，有 DOI，摘要或许可为空，发布（或首次见到）不早于 since，
+        且从没试过或上次尝试早于 retry_before。从没试过的优先，其次按发布时间从新到旧。"""
+        if not sources or limit <= 0:
+            return []
+        marks = ",".join("?" * len(sources))
+        sql = f"""
+            SELECT r.*, a.attempts AS _attempts, a.last_attempt_at AS _last_attempt_at
+            FROM records r LEFT JOIN enrich_attempts a ON a.id = r.id
+            WHERE r.kind = 'article' AND r.doi IS NOT NULL AND r.source IN ({marks})
+              AND (r.summary IS NULL OR r.summary = '' OR r.license IS NULL OR r.license = '')
+              AND COALESCE(r.published_at, r.first_seen_at) >= ?
+              AND (a.last_attempt_at IS NULL OR a.last_attempt_at < ?)
+            ORDER BY (a.id IS NOT NULL), COALESCE(r.published_at, r.first_seen_at) DESC, r.id
+            LIMIT ?"""
+        out = []
+        for row in self.conn.execute(sql, [*sources, since, retry_before, limit]):
+            rec = self._from_row(row)
+            rec["_enriched_fields"] = json.loads(row["enriched_fields"] or "[]")
+            out.append(rec)
+        return out
+
+    def apply_enrichment(self, rec_id: str, updates: dict, now: str, source: str) -> list[str]:
+        """只写 updates 里的字段（调用方已保证原值为空或可替换），记下 enriched_at / enrich_source。
+        返回实际写入的字段名。"""
+        if not updates:
+            return []
+        old = self.conn.execute("SELECT * FROM records WHERE id = ?", (rec_id,)).fetchone()
+        if old is None:
+            return []
+        fields = json.loads(old["enriched_fields"] or "[]")
+        row = self._to_row({**self._from_row(old), **updates})
+        for f in updates:
+            if f not in fields:
+                fields.append(f)
+        sets = ", ".join(f"{f} = ?" for f in updates)
+        with self.conn:
+            self.conn.execute(
+                f"UPDATE records SET {sets}, enriched_at = ?, enrich_source = ?, enriched_fields = ?, updated_at = ? WHERE id = ?",
+                [row[f] for f in updates] + [now, source, json.dumps(fields), now, rec_id],
+            )
+        return list(updates)
+
+    def record_attempt(self, rec_id: str, now: str, result: str, error: str | None = None) -> None:
+        with self.conn:
+            self.conn.execute(
+                """INSERT INTO enrich_attempts(id, attempts, first_attempt_at, last_attempt_at, last_result, last_error)
+                   VALUES (?, 1, ?, ?, ?, ?)
+                   ON CONFLICT(id) DO UPDATE SET attempts = attempts + 1, last_attempt_at = excluded.last_attempt_at,
+                     last_result = excluded.last_result, last_error = excluded.last_error""",
+                (rec_id, now, now, result, (error or None) and error[:500]),
+            )
+
+    def enrich_summary(self) -> dict:
+        r = self.conn.execute(
+            """SELECT COUNT(*) n, SUM(last_result IN ('filled','partial','found_nothing_new')) found,
+                      SUM(last_result = 'not_found') not_found, SUM(last_result = 'error') errors
+               FROM enrich_attempts"""
+        ).fetchone()
+        return {"tracked": r["n"], "found": r["found"] or 0, "not_found": r["not_found"] or 0, "errors": r["errors"] or 0}
+
     def records(self, since: str | None = None) -> list[dict]:
         sql = "SELECT * FROM records"
         args: list = []
@@ -133,7 +262,13 @@ class Store:
     def source_summary(self) -> dict[str, dict]:
         out = {}
         for r in self.conn.execute(
-            "SELECT source, COUNT(*) n, MAX(published_at) latest, SUM(status='stale') stale FROM records GROUP BY source"
+            """SELECT source, COUNT(*) n, MAX(published_at) latest, SUM(status='stale') stale,
+                      SUM(summary IS NOT NULL AND summary != '') with_summary,
+                      SUM(enriched_at IS NOT NULL) enriched,
+                      SUM(COALESCE(enriched_fields, '') LIKE '%"summary"%') summary_enriched
+               FROM records GROUP BY source"""
         ):
-            out[r["source"]] = {"records": r["n"], "latest_published_at": r["latest"], "stale": r["stale"]}
+            out[r["source"]] = {"records": r["n"], "latest_published_at": r["latest"], "stale": r["stale"],
+                                "with_summary": r["with_summary"], "enriched": r["enriched"],
+                                "summary_from_enrich": r["summary_enriched"]}
         return out
