@@ -173,7 +173,7 @@ python3 -m venv .venv && .venv/bin/pip install -r requirements.txt
 
 - 代码：`/opt/health-sources`（venv 在 `.venv`，不改系统 Python）
 - 数据：`/var/lib/health-sources/`，属主为系统用户 `health-sources`
-- 定时：`deploy/health-sources.timer`，每天 10:30（北京时间）；`Persistent=true`，错过会补跑
+- 定时：`deploy/health-sources.timer`，每天 11:00（北京时间，2026-10-25 起，原 10:30；公卫前沿火山云 11:17 读取）；`Persistent=true`，错过会补跑
 - 资源：`MemoryMax=150M`、`MemorySwapMax=0`、`CPUQuota=50%`、`Nice=10`、IO idle；`ProtectSystem=strict`，只允许写数据目录
 - 安装：代码放到 `/opt/health-sources` 后以 root 运行 `deploy/install.sh`
 - 下游只读访问（2026-10-25 起，为公卫前沿火山云采集准备，尚未接入定时任务）：系统账号 `hs-reader`，

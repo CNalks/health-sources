@@ -1,8 +1,8 @@
 [Unit]
-Description=Run health-sources daily at 10:30 Beijing time
+Description=Run health-sources daily at 11:00 Beijing time
 
 [Timer]
-OnCalendar=*-*-* 10:30:00 Asia/Shanghai
+OnCalendar=*-*-* 11:00:00 Asia/Shanghai
 Persistent=true
 Unit=health-sources.service
 
