@@ -6,7 +6,7 @@
 - **公卫前沿**（CNalks/CDC-Weekly-Digest）三阶段：从 `kind=article` 里挑文章再走自己的出稿流程；
 - **Global Health Signals**（CNalks/ai4health-global）：从 `kind=news` 里取疫情事件/官方通报。
 
-当前阶段只做到「采集并写文件试跑」，**没有接任何下游**。
+当前阶段只做到「采集并写文件试跑」。公卫前沿（火山云）改读本库的方案已备好（CDC-Weekly-Digest PR #51），等批准后接入。
 
 **发现靠各刊 RSS，补全靠 Europe PMC 按 DOI 回查。** 新文章只从各刊/各机构自己的 RSS（或官方接口）发现；
 Europe PMC 不再作为独立来源广撒网，只在「补全」步骤里按 DOI 逐篇回查，给缺摘要、缺许可的文章补上摘要、许可、PMCID 和关键词。
@@ -176,6 +176,10 @@ python3 -m venv .venv && .venv/bin/pip install -r requirements.txt
 - 定时：`deploy/health-sources.timer`，每天 10:30（北京时间）；`Persistent=true`，错过会补跑
 - 资源：`MemoryMax=150M`、`MemorySwapMax=0`、`CPUQuota=50%`、`Nice=10`、IO idle；`ProtectSystem=strict`，只允许写数据目录
 - 安装：代码放到 `/opt/health-sources` 后以 root 运行 `deploy/install.sh`
+- 下游只读访问（2026-10-25 起，为公卫前沿火山云采集准备，尚未接入定时任务）：系统账号 `hs-reader`，
+  `authorized_keys` 为 `restrict,from="101.47.156.198",command="/usr/local/bin/hs-export-read"`，
+  强制命令只输出 `status.json` + `by-source/*.jsonl` 的 tar（源码在 CNalks/CDC-Weekly-Digest `ops/aliyun/hs-export-read`）。
+  撤销：`userdel -r hs-reader && rm /usr/local/bin/hs-export-read`
 
 ```bash
 systemctl list-timers health-sources.timer     # 下次运行时间
