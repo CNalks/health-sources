@@ -98,10 +98,22 @@ class CrossrefTests(unittest.TestCase):
         self.assertEqual((r["volume"], r["issue"]), ("32", "9"))
         self.assertTrue(r["authors"])
         self.assertNotIn("<b>", r["title"])
-        self.assertEqual(r["published_at"], "2026-09-01T00:00:00+00:00")
+        # 只有「年-月」→ 用 DOI 注册时间（fixture 里 created 存在时）或当月 1 日
+        self.assertTrue(r["published_at"].startswith("2026-0"))
         self.assertIn("from-pub-date:2026-08-01", http.params[0]["filter"])
         # 不足一页就停，不再翻页
         self.assertEqual(len(http.calls), 1)
+
+    def test_date_rules(self):
+        today = "2026-10-25T00:00:00+00:00"
+        self.assertEqual(bf._date_parts({"published-online": {"date-parts": [[2026, 8, 20]]}}, today), "2026-08-20T00:00:00+00:00")
+        self.assertEqual(bf._date_parts({"published-print": {"date-parts": [[2026, 11]]},
+                                         "created": {"date-time": "2026-10-10T00:41:47Z"}}, today), "2026-10-10T00:41:47+00:00")
+        self.assertEqual(bf._date_parts({"published-print": {"date-parts": [[2026, 9]]}}, today), "2026-09-01T00:00:00+00:00")
+        # 2109 年（元数据录错）跳过，回落到 created
+        self.assertEqual(bf._date_parts({"published-print": {"date-parts": [[2109, 2]]},
+                                         "created": {"date-time": "2019-01-07T02:01:51Z"}}, today), "2019-01-07T02:01:51+00:00")
+        self.assertIsNone(bf._date_parts({"published-print": {"date-parts": [[2109, 2]]}}, today))
 
     def test_eid_url(self):
         self.assertEqual(bf.eid_url("10.3201/eid3212.251991"), "https://wwwnc.cdc.gov/eid/article/32/12/25-1991_article")
@@ -140,6 +152,7 @@ class PagedTests(unittest.TestCase):
         self.assertEqual(len(http.calls), 2)
         self.assertTrue(http.calls[1].endswith("?page=1"))
         self.assertEqual(len(recs), 2)
+        self.assertTrue(any("pagination ignored" in n for n in c.notes))
 
     def test_plos_search(self):
         src = source_cfg("plos_ntds")

@@ -104,9 +104,9 @@ CDC Weekly 只读订阅官网 RSS，**不抓文章页面**（官网会弹验证�
 | `cdc_weekly` | `rss/{年}_{期}.xml` | 每期一个请求，间隔 6 秒（官网有验证码风控）；期号元数据对不上的条目丢弃 |
 | `mmwr` | 全量 RSS | 2000+ 条、不按时间排序：流式按 100 条一块解析，只留 `--since` 之后的，再逐条解析下载跳转 |
 | `eurosurveillance` | Crossref `journals/1560-7917/works` | 官网按期 RSS 返回空、目录页是 HTML，所以走 DOI 注册机构的 API |
-| `eid` | Crossref `journals/1080-6059/works` | 官网只有提前在线 feed；Crossref 对 EID 多数只给到「年-月」，`published_at` 记为当月 1 日 |
+| `eid` | Crossref `journals/1080-6059/works` | 官网只有提前在线 feed；Crossref 对 EID 只给到「年-月」，`published_at` 改用 DOI 注册时间（约等于上线日期）；明显错误的未来日期跳过 |
 | `who_don` | 官方 JSON 接口 `$skip` 分页 | 50 条一页，翻到早于 `--since` 为止 |
-| `ecdc` | taxonomy feed `?page=N` | 4 个子 feed 各自翻页；服务器返回重复页时停止 |
+| `ecdc` | taxonomy feed `?page=N` | 4 个子 feed 各自翻页；服务器返回重复页时停止并记 note。实测（2026-10-25）ECDC 忽略分页参数，往期只能拿到 feed 当前给出的那些 |
 | `plos_ntds` | PLOS 搜索 API（`doc_type:full` + 日期过滤） | 100 条一页 |
 
 - 每页 / 每期解析完立即写库（按 id 去重合并），不把整段历史读进内存；

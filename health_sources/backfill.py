@@ -172,13 +172,29 @@ def bf_full_feed(src: dict, ctx: Ctx, opts: dict) -> Iterator[Batch]:
 
 # ---------------------------------------------------------------- crossref
 
-def _date_parts(item: dict) -> str | None:
+def _date_parts(item: dict, today: str | None = None) -> str | None:
+    """优先取精确到日的出版日期；Crossref 只给到「年-月」时（EID 常见）改用 DOI 注册时间 created
+    （约等于上线日期），再不行才记为当月 1 日。明显不合理的未来日期（> 今天 + 90 天，如元数据把 2019 录成 2109）跳过。"""
+    limit = None
+    if today:
+        y, m, d = (int(x) for x in today[:10].split("-"))
+        limit = f"{y + (m + 3 > 12):04d}-{(m + 3 - 1) % 12 + 1:02d}-{d:02d}"
+    month_only = None
     for key in ("published-online", "published-print", "published", "issued"):
         parts = ((item.get(key) or {}).get("date-parts") or [[None]])[0]
-        if parts and parts[0]:
-            y, m, d = (list(parts) + [1, 1])[:3]
-            return f"{int(y):04d}-{int(m or 1):02d}-{int(d or 1):02d}T00:00:00+00:00"
-    return None
+        if not parts or not parts[0]:
+            continue
+        y, m, d = (list(parts) + [None, None])[:3]
+        iso = f"{int(y):04d}-{int(m or 1):02d}-{int(d or 1):02d}"
+        if limit and iso > limit:
+            continue
+        if d:
+            return f"{iso}T00:00:00+00:00"
+        month_only = month_only or iso
+    created = parse_iso((item.get("created") or {}).get("date-time"))
+    if created and (not limit or created[:10] <= limit):
+        return created
+    return f"{month_only}T00:00:00+00:00" if month_only else None
 
 
 def eid_url(doi: str) -> str | None:
@@ -208,7 +224,7 @@ def crossref_record(item: dict, src: dict, conf: dict, now: str) -> dict | None:
     if abstract:
         abstract = re.sub(r"<jats:title>[^<]*</jats:title>", " ", abstract)
     return make_record(
-        src, title=title, url=url, published_at=_date_parts(item), fetched_at=now, doi=doi,
+        src, title=title, url=url, published_at=_date_parts(item, now), fetched_at=now, doi=doi,
         summary=clean_summary(abstract) if abstract else None,
         native_keywords=item.get("subject") or None,
         meta={"journal": (item.get("container-title") or [None])[0], "volume": item.get("volume"),
@@ -226,7 +242,7 @@ def bf_crossref(src: dict, ctx: Ctx, opts: dict) -> Iterator[Batch]:
     for _ in range(conf.get("max_pages", 30)):
         params = {"filter": f"from-pub-date:{ctx.since}", "rows": str(rows), "cursor": cursor,
                   "select": "DOI,title,published-online,published-print,published,issued,volume,issue,page,"
-                            "author,URL,resource,container-title,abstract,subject,type"}
+                            "author,URL,resource,container-title,abstract,subject,type,created"}
         data = json.loads(ctx.get(url, conf.get("delay_seconds", 1.0), params=params).content)["message"]
         items = data.get("items") or []
         if not items:
@@ -280,6 +296,8 @@ def bf_feed_pages(src: dict, ctx: Ctx, opts: dict) -> Iterator[Batch]:
                 break
             ids = {r["id"] for r in recs}
             if not recs or ids <= prev_ids:   # 空页，或服务器忽略分页参数返回同一页
+                if recs and page:
+                    ctx.notes.append(f"{f['url']}: page={page} returned the same items as before (pagination ignored)")
                 break
             prev_ids |= ids
             for r in recs:
