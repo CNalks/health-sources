@@ -23,6 +23,7 @@ def make_record(
     license: str | None = None,
     figures_allowed: bool | None = None,
     lang: str | None = None,
+    meta: dict | None = None,
 ) -> dict:
     # license 为 per_record 的来源只认每篇自己的许可，不回落到来源默认值
     per_record = cfg.get("license") == "per_record"
@@ -50,4 +51,23 @@ def make_record(
         "pmcid": None,
         "enriched_at": None,
         "enrich_source": None,
+        **_meta(meta),
     }
+
+
+META_FIELDS = ("journal", "volume", "issue", "pages", "article_type", "authors", "issue_order", "feed_url")
+
+
+def _meta(meta: dict | None) -> dict:
+    """卷期等可选字段：空字符串 / 空列表一律存 null。"""
+    out = {}
+    for f in META_FIELDS:
+        v = (meta or {}).get(f)
+        if isinstance(v, str):
+            v = v.strip() or None
+        elif isinstance(v, list):
+            v = [str(a).strip() for a in v if str(a).strip()] or None
+        elif isinstance(v, (int, float)) and f in ("volume", "issue"):
+            v = str(int(v))
+        out[f] = v
+    return out

@@ -1,4 +1,4 @@
-"""命令行：python -m health_sources run|export|validate"""
+"""命令行：python -m health_sources run|enrich|backfill|export|validate"""
 from __future__ import annotations
 
 import argparse
@@ -23,6 +23,14 @@ def main(argv: list[str] | None = None) -> int:
     r.add_argument("--no-enrich", action="store_true", help="跳过按 DOI 回查 Europe PMC 的补全步骤")
     e = sub.add_parser("enrich", help="只跑补全步骤（按 DOI 回查 Europe PMC），然后重新导出")
     e.add_argument("--only", nargs="*", help="只补这些来源 id 的记录")
+    e.add_argument("--window-days", type=int, help="覆盖 enrich.window_days（回补后补全往期用）")
+    e.add_argument("--max-per-run", type=int, help="覆盖 enrich.max_per_run")
+    e.add_argument("--max-seconds", type=int, help="覆盖 enrich.max_seconds")
+    b = sub.add_parser("backfill", help="往期回补（各来源自己的往期入口，分批写库），然后重新导出")
+    b.add_argument("--only", nargs="*", help="只回补这些来源 id（默认全部）")
+    b.add_argument("--since", required=True, help="起始日期 YYYY-MM-DD（含）")
+    b.add_argument("--year", type=int, help="cdc_weekly：年份")
+    b.add_argument("--issues", help="cdc_weekly：期号范围，如 28-43")
     sub.add_parser("export", help="只从 SQLite 重新导出快照")
     sub.add_parser("validate", help="校验 latest.jsonl 每条记录")
     args = p.parse_args(argv)
@@ -40,18 +48,30 @@ def main(argv: list[str] | None = None) -> int:
         cfg = runner.load_config(args.config)
         store = Store(Path(args.data_dir) / "health_sources.sqlite")
         try:
-            stats = runner.run_enrich(cfg, store, now_iso(), only=args.only)
-            runner.export(store, Path(args.data_dir), enrich_stats=stats)
+            over = {k: v for k, v in (("window_days", args.window_days), ("max_per_run", args.max_per_run),
+                                      ("max_seconds", args.max_seconds)) if v}
+            stats = runner.run_enrich(cfg, store, now_iso(), only=args.only, overrides=over)
+            runner.export(store, Path(args.data_dir), enrich_stats=stats, **runner.export_opts(cfg))
         finally:
             store.close()
         rss_mb = resource.getrusage(resource.RUSAGE_SELF).ru_maxrss / 1024
         print(json.dumps(stats, ensure_ascii=False, indent=2))
         logging.info("enrich done, peak RSS %.1f MB", rss_mb)
         return 0
+    if args.cmd == "backfill":
+        results = runner.run_backfill(args.config, args.data_dir, args.only or [], args.since,
+                                      {"year": args.year, "issues": args.issues})
+        rss_mb = resource.getrusage(resource.RUSAGE_SELF).ru_maxrss / 1024
+        print(json.dumps([{k: r.get(k) for k in ("source", "ok", "skipped", "records", "new", "updated", "invalid",
+                                                  "requests", "earliest", "latest", "seconds", "error")}
+                          for r in results], ensure_ascii=False, indent=2))
+        logging.info("backfill done, peak RSS %.1f MB", rss_mb)
+        return 0 if all(r["ok"] or r.get("skipped") for r in results) else 1
     if args.cmd == "export":
+        cfg = runner.load_config(args.config)
         store = Store(Path(args.data_dir) / "health_sources.sqlite")
         try:
-            st = runner.export(store, Path(args.data_dir))
+            st = runner.export(store, Path(args.data_dir), **runner.export_opts(cfg))
         finally:
             store.close()
         print(json.dumps(st["sources"], ensure_ascii=False, indent=2))

@@ -1,0 +1,188 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<rdf:RDF xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#" xmlns:prism="http://prismstandard.org/namespaces/basic/2.0/" xmlns:dc="http://purl.org/dc/elements/1.1/" xmlns:syn="http://purl.org/rss/1.0/modules/syndication/" xmlns:content="http://purl.org/rss/1.0/modules/content/" xmlns="http://purl.org/rss/1.0/">
+  <channel rdf:about="https://weekly.chinacdc.cn/">
+    <title>China CDC Weekly</title>
+    <link>https://weekly.chinacdc.cn/</link>
+    <description>China CDC Weekly</description>
+    <syn:updatePeriod>day</syn:updatePeriod>
+    <syn:updateFrequency>15</syn:updateFrequency>
+    <syn:updateBase>2026-10-25 04:18:09</syn:updateBase>
+    <dc:creator><a href="mailto:cdcwjournal@163.com">cdcwjournal@163.com</a></dc:creator>
+    <dc:publisher><a href="mailto:cdcwjournal@163.com">cdcwjournal@163.com</a></dc:publisher>
+    <dc:date>2026-10-25 04:18:09</dc:date>
+    <dc:language>en</dc:language>
+	<dc:rights>Copyright © 2026 by Chinese Center for Disease Control and Prevention &amp; Chinese Academy of Preventive Medicine</dc:rights>
+    <prism:copyright>Copyright © 2026 by Chinese Center for Disease Control and Prevention &amp; Chinese Academy of Preventive Medicine</prism:copyright>
+    <prism:rightsAgent><a href="mailto:cdcwjournal@163.com">cdcwjournal@163.com</a></prism:rightsAgent>
+    <prism:issn>2096-7071</prism:issn>
+    <items>
+		<rdf:Seq>
+<rdf:li rdf:resource="https://weekly.chinacdc.cn/article/doi/10.46234/ccdcw2026.143"/>
+<rdf:li rdf:resource="https://weekly.chinacdc.cn/article/doi/10.46234/ccdcw2026.144"/>
+<rdf:li rdf:resource="https://weekly.chinacdc.cn/article/doi/10.46234/ccdcw2026.142"/>
+<rdf:li rdf:resource="https://weekly.chinacdc.cn/article/doi/10.46234/ccdcw2026.145"/>
+<rdf:li rdf:resource="https://weekly.chinacdc.cn/article/doi/10.46234/ccdcw2026.141"/>
+		</rdf:Seq>
+    </items>
+  </channel>
+  <item rdf:about="https://weekly.chinacdc.cn/article/doi/10.46234/ccdcw2026.143">
+    <title><![CDATA[Trends in Two-Week Prevalence of Fever and Diarrhea Among Infants and Young Children in Rural — China, 2016–2025]]></title>
+<link>https://weekly.chinacdc.cn/article/doi/10.46234/ccdcw2026.143</link>
+    <description>
+		<![CDATA[
+			
+			&lt;br/&gt;&lt;p&gt;&lt;/p&gt;
+			&lt;br/&gt;China CDC Weekly. 2026 8(28): 873-878. Published 2026-07-10
+		]]>
+	</description>
+    <content:encoded>
+		<![CDATA[
+			
+			&lt;br/&gt;&lt;p&gt;&lt;/p&gt;
+			&lt;br/&gt;China CDC Weekly. 2026 8(28): 873-878. Published 2026-07-10
+		]]>
+	</content:encoded>
+    <dc:title><![CDATA[Trends in Two-Week Prevalence of Fever and Diarrhea Among Infants and Young Children in Rural — China, 2016–2025]]></dc:title>
+    <dc:creator><![CDATA[]]></dc:creator>
+    <dc:date>2026-07-10</dc:date>
+    <dc:rights>Personal use only, all commercial or other reuse prohibited</dc:rights>
+    <dc:source>China CDC Weekly. 2026 8(28): 873-878.</dc:source>
+    <dc:type>article</dc:type>
+    <dc:identifier>doi:10.46234/ccdcw2026.143</dc:identifier>
+    <prism:doi>10.46234/ccdcw2026.143</prism:doi>
+    <prism:publicationName>China CDC Weekly</prism:publicationName>
+    <prism:volume>8</prism:volume>
+    <prism:number>28</prism:number>
+    <prism:publicationDate>2026-07-10</prism:publicationDate>
+<prism:url>https://weekly.chinacdc.cn/article/doi/10.46234/ccdcw2026.143</prism:url>
+	<prism:startingPage>873-878</prism:startingPage>
+  </item>
+  <item rdf:about="https://weekly.chinacdc.cn/article/doi/10.46234/ccdcw2026.144">
+    <title><![CDATA[Impact of Rest Break, Shift Work, and Overtime on Musculoskeletal Disorders — China, 2018–2023]]></title>
+<link>https://weekly.chinacdc.cn/article/doi/10.46234/ccdcw2026.144</link>
+    <description>
+		<![CDATA[
+			
+			&lt;br/&gt;&lt;p&gt;&lt;/p&gt;
+			&lt;br/&gt;China CDC Weekly. 2026 8(28): 879-885. Published 2026-07-10
+		]]>
+	</description>
+    <content:encoded>
+		<![CDATA[
+			
+			&lt;br/&gt;&lt;p&gt;&lt;/p&gt;
+			&lt;br/&gt;China CDC Weekly. 2026 8(28): 879-885. Published 2026-07-10
+		]]>
+	</content:encoded>
+    <dc:title><![CDATA[Impact of Rest Break, Shift Work, and Overtime on Musculoskeletal Disorders — China, 2018–2023]]></dc:title>
+    <dc:creator><![CDATA[]]></dc:creator>
+    <dc:date>2026-07-10</dc:date>
+    <dc:rights>Personal use only, all commercial or other reuse prohibited</dc:rights>
+    <dc:source>China CDC Weekly. 2026 8(28): 879-885.</dc:source>
+    <dc:type>article</dc:type>
+    <dc:identifier>doi:10.46234/ccdcw2026.144</dc:identifier>
+    <prism:doi>10.46234/ccdcw2026.144</prism:doi>
+    <prism:publicationName>China CDC Weekly</prism:publicationName>
+    <prism:volume>8</prism:volume>
+    <prism:number>28</prism:number>
+    <prism:publicationDate>2026-07-10</prism:publicationDate>
+<prism:url>https://weekly.chinacdc.cn/article/doi/10.46234/ccdcw2026.144</prism:url>
+	<prism:startingPage>879-885</prism:startingPage>
+  </item>
+  <item rdf:about="https://weekly.chinacdc.cn/article/doi/10.46234/ccdcw2026.142">
+    <title><![CDATA[Congenital Clubfoot Prevalence and Folic Acid Supplementation — Five Counties, Shanxi Province, China, 2003–2024]]></title>
+<link>https://weekly.chinacdc.cn/article/doi/10.46234/ccdcw2026.142</link>
+    <description>
+		<![CDATA[
+			
+			&lt;br/&gt;&lt;p&gt;&lt;/p&gt;
+			&lt;br/&gt;China CDC Weekly. 2026 8(28): 886-891. Published 2026-07-10
+		]]>
+	</description>
+    <content:encoded>
+		<![CDATA[
+			
+			&lt;br/&gt;&lt;p&gt;&lt;/p&gt;
+			&lt;br/&gt;China CDC Weekly. 2026 8(28): 886-891. Published 2026-07-10
+		]]>
+	</content:encoded>
+    <dc:title><![CDATA[Congenital Clubfoot Prevalence and Folic Acid Supplementation — Five Counties, Shanxi Province, China, 2003–2024]]></dc:title>
+    <dc:creator><![CDATA[]]></dc:creator>
+    <dc:date>2026-07-10</dc:date>
+    <dc:rights>Personal use only, all commercial or other reuse prohibited</dc:rights>
+    <dc:source>China CDC Weekly. 2026 8(28): 886-891.</dc:source>
+    <dc:type>article</dc:type>
+    <dc:identifier>doi:10.46234/ccdcw2026.142</dc:identifier>
+    <prism:doi>10.46234/ccdcw2026.142</prism:doi>
+    <prism:publicationName>China CDC Weekly</prism:publicationName>
+    <prism:volume>8</prism:volume>
+    <prism:number>28</prism:number>
+    <prism:publicationDate>2026-07-10</prism:publicationDate>
+<prism:url>https://weekly.chinacdc.cn/article/doi/10.46234/ccdcw2026.142</prism:url>
+	<prism:startingPage>886-891</prism:startingPage>
+  </item>
+  <item rdf:about="https://weekly.chinacdc.cn/article/doi/10.46234/ccdcw2026.145">
+    <title><![CDATA[Nomogram for Predicting Myopia Risk in Chinese Children and Adolescents Aged 5–19 Years — 10 PLADs, China 2020–2024]]></title>
+<link>https://weekly.chinacdc.cn/article/doi/10.46234/ccdcw2026.145</link>
+    <description>
+		<![CDATA[
+			
+			&lt;br/&gt;&lt;p&gt;&lt;/p&gt;
+			&lt;br/&gt;China CDC Weekly. 2026 8(28): 892-897. Published 2026-07-10
+		]]>
+	</description>
+    <content:encoded>
+		<![CDATA[
+			
+			&lt;br/&gt;&lt;p&gt;&lt;/p&gt;
+			&lt;br/&gt;China CDC Weekly. 2026 8(28): 892-897. Published 2026-07-10
+		]]>
+	</content:encoded>
+    <dc:title><![CDATA[Nomogram for Predicting Myopia Risk in Chinese Children and Adolescents Aged 5–19 Years — 10 PLADs, China 2020–2024]]></dc:title>
+    <dc:creator><![CDATA[]]></dc:creator>
+    <dc:date>2026-07-10</dc:date>
+    <dc:rights>Personal use only, all commercial or other reuse prohibited</dc:rights>
+    <dc:source>China CDC Weekly. 2026 8(28): 892-897.</dc:source>
+    <dc:type>article</dc:type>
+    <dc:identifier>doi:10.46234/ccdcw2026.145</dc:identifier>
+    <prism:doi>10.46234/ccdcw2026.145</prism:doi>
+    <prism:publicationName>China CDC Weekly</prism:publicationName>
+    <prism:volume>8</prism:volume>
+    <prism:number>28</prism:number>
+    <prism:publicationDate>2026-07-10</prism:publicationDate>
+<prism:url>https://weekly.chinacdc.cn/article/doi/10.46234/ccdcw2026.145</prism:url>
+	<prism:startingPage>892-897</prism:startingPage>
+  </item>
+  <item rdf:about="https://weekly.chinacdc.cn/article/doi/10.46234/ccdcw2026.141">
+    <title><![CDATA[Commemorating the Centenary of Fangzhou Gu]]></title>
+<link>https://weekly.chinacdc.cn/article/doi/10.46234/ccdcw2026.141</link>
+    <description>
+		<![CDATA[
+			
+			&lt;br/&gt;&lt;p&gt;&lt;/p&gt;
+			&lt;br/&gt;China CDC Weekly. 2026 8(28): 898-900. Published 2026-07-10
+		]]>
+	</description>
+    <content:encoded>
+		<![CDATA[
+			
+			&lt;br/&gt;&lt;p&gt;&lt;/p&gt;
+			&lt;br/&gt;China CDC Weekly. 2026 8(28): 898-900. Published 2026-07-10
+		]]>
+	</content:encoded>
+    <dc:title><![CDATA[Commemorating the Centenary of Fangzhou Gu]]></dc:title>
+    <dc:creator><![CDATA[]]></dc:creator>
+    <dc:date>2026-07-10</dc:date>
+    <dc:rights>Personal use only, all commercial or other reuse prohibited</dc:rights>
+    <dc:source>China CDC Weekly. 2026 8(28): 898-900.</dc:source>
+    <dc:type>article</dc:type>
+    <dc:identifier>doi:10.46234/ccdcw2026.141</dc:identifier>
+    <prism:doi>10.46234/ccdcw2026.141</prism:doi>
+    <prism:publicationName>China CDC Weekly</prism:publicationName>
+    <prism:volume>8</prism:volume>
+    <prism:number>28</prism:number>
+    <prism:publicationDate>2026-07-10</prism:publicationDate>
+<prism:url>https://weekly.chinacdc.cn/article/doi/10.46234/ccdcw2026.141</prism:url>
+	<prism:startingPage>898-900</prism:startingPage>
+  </item>
+</rdf:RDF>

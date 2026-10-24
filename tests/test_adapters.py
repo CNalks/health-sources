@@ -1,6 +1,6 @@
 import unittest
 
-from health_sources.adapters import mmwr, rss, who_don
+from health_sources.adapters import ccdc, mmwr, rss, who_don
 from health_sources.schema import validate
 from tests.helpers import NOW, FakeHttp, fixture, source_cfg
 
@@ -90,7 +90,7 @@ class AdapterTests(unittest.TestCase):
 
     def test_cdc_weekly_rdf_doi_no_summary(self):
         cfg = source_cfg("cdc_weekly")
-        recs = rss.parse(fixture("cdc_weekly.xml"), cfg, NOW)
+        recs = ccdc.parse(fixture("cdc_weekly.xml"), cfg, NOW)
         self.assertEqual(len(recs), 4)
         self.assertAllValid(recs)
         r = recs[0]
@@ -103,13 +103,30 @@ class AdapterTests(unittest.TestCase):
         self.assertEqual(r["published_at"], "2026-10-23T00:00:00+00:00")
         self.assertIsNone(r["pmcid"])
         self.assertIsNone(r["enriched_at"])
+        # PRISM 卷期字段（按期组织用）；feed 里没有作者和栏目，留空不造
+        self.assertEqual((r["journal"], r["volume"], r["issue"], r["pages"]), ("China CDC Weekly", "8", "43", "1313-1318"))
+        self.assertEqual([x["issue_order"] for x in recs], [0, 1, 2, 3])
+        self.assertIsNone(r["authors"])
+        self.assertIsNone(r["article_type"])
+        self.assertEqual(r["feed_url"], "https://weekly.chinacdc.cn/rss/current.xml")
 
     def test_cdc_weekly_only_fetches_rss(self):
         cfg = source_cfg("cdc_weekly")
         http = FakeHttp({"https://weekly.chinacdc.cn/rss/current.xml": fixture("cdc_weekly.xml")})
-        recs = rss.fetch(cfg, http, NOW)
+        recs = ccdc.fetch(cfg, http, NOW)
         self.assertEqual(len(recs), 4)
         self.assertEqual(http.calls, ["https://weekly.chinacdc.cn/rss/current.xml"])  # 不抓文章页面
+
+
+    def test_ccdc_title_rules_match_fetch_ccdc_mjs(self):
+        # 与 CDC-Weekly-Digest scripts/fetch-ccdc.mjs 的 decodeXml + normalizeRssTitle 一致
+        self.assertEqual(ccdc.normalize_rss_title(ccdc.decode_xml("<![CDATA[A  <i>B</i>\n C &amp; D]]>")), "A B C & D")
+        self.assertEqual(ccdc.normalize_rss_title("Foo </i<bar"), "Foo bar")
+
+    def test_ccdc_rejects_foreign_host(self):
+        bad = fixture("cdc_weekly.xml").replace(b"<prism:url>https://weekly.chinacdc.cn", b"<prism:url>https://evil.example", 1)
+        with self.assertRaises(ValueError):
+            ccdc.parse(bad, source_cfg("cdc_weekly"), NOW)
 
 
 if __name__ == "__main__":

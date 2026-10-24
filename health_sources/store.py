@@ -28,7 +28,15 @@ CREATE TABLE IF NOT EXISTS records (
     pmcid TEXT,
     enriched_at TEXT,
     enrich_source TEXT,
-    enriched_fields TEXT              -- JSON 数组：由 enrich 写入的字段，之后 feed 再抓到时不覆盖
+    enriched_fields TEXT,             -- JSON 数组：由 enrich 写入的字段，之后 feed 再抓到时不覆盖
+    journal TEXT,
+    volume TEXT,
+    issue TEXT,
+    pages TEXT,
+    article_type TEXT,
+    authors TEXT,                     -- JSON 数组或 NULL
+    issue_order INTEGER,
+    feed_url TEXT
 );
 CREATE INDEX IF NOT EXISTS idx_records_source ON records(source);
 CREATE INDEX IF NOT EXISTS idx_records_published ON records(published_at);
@@ -58,6 +66,14 @@ MIGRATIONS = {
     "enriched_at": "ALTER TABLE records ADD COLUMN enriched_at TEXT",
     "enrich_source": "ALTER TABLE records ADD COLUMN enrich_source TEXT",
     "enriched_fields": "ALTER TABLE records ADD COLUMN enriched_fields TEXT",
+    "journal": "ALTER TABLE records ADD COLUMN journal TEXT",
+    "volume": "ALTER TABLE records ADD COLUMN volume TEXT",
+    "issue": "ALTER TABLE records ADD COLUMN issue TEXT",
+    "pages": "ALTER TABLE records ADD COLUMN pages TEXT",
+    "article_type": "ALTER TABLE records ADD COLUMN article_type TEXT",
+    "authors": "ALTER TABLE records ADD COLUMN authors TEXT",
+    "issue_order": "ALTER TABLE records ADD COLUMN issue_order INTEGER",
+    "feed_url": "ALTER TABLE records ADD COLUMN feed_url TEXT",
 }
 
 CONTENT_FIELDS = [f for f in FIELDS if f not in ("id", "fetched_at", "status")]
@@ -83,8 +99,11 @@ class Store:
     @staticmethod
     def _to_row(rec: dict) -> dict:
         row = dict(rec)
+        for f in FIELDS:            # v0.2 及更早构造的记录没有卷期字段：按 null 处理
+            row.setdefault(f, None)
         row["keywords"] = json.dumps(rec["keywords"], ensure_ascii=False)
         row["figures_allowed"] = int(bool(rec["figures_allowed"]))
+        row["authors"] = json.dumps(rec["authors"], ensure_ascii=False) if rec.get("authors") else None
         return row
 
     @staticmethod
@@ -92,6 +111,7 @@ class Store:
         rec = {f: row[f] for f in FIELDS}
         rec["keywords"] = json.loads(rec["keywords"])
         rec["figures_allowed"] = bool(rec["figures_allowed"])
+        rec["authors"] = json.loads(rec["authors"]) if rec["authors"] else None
         return rec
 
     def upsert(self, records: list[dict], now: str) -> dict:
@@ -246,6 +266,24 @@ class Store:
                FROM enrich_attempts"""
         ).fetchone()
         return {"tracked": r["n"], "found": r["found"] or 0, "not_found": r["not_found"] or 0, "errors": r["errors"] or 0}
+
+    def iter_records(self, since: str | None = None, source: str | None = None):
+        """逐行读出（游标迭代，不整表进内存）。"""
+        sql, args, where = "SELECT * FROM records", [], []
+        if since:
+            where.append("COALESCE(published_at, first_seen_at) >= ?")
+            args.append(since)
+        if source:
+            where.append("source = ?")
+            args.append(source)
+        if where:
+            sql += " WHERE " + " AND ".join(where)
+        sql += " ORDER BY COALESCE(published_at, first_seen_at) DESC, source, id"
+        for r in self.conn.execute(sql, args):
+            yield self._from_row(r)
+
+    def sources_present(self) -> list[str]:
+        return [r[0] for r in self.conn.execute("SELECT DISTINCT source FROM records ORDER BY source")]
 
     def records(self, since: str | None = None) -> list[dict]:
         sql = "SELECT * FROM records"

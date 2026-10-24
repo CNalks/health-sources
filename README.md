@@ -61,6 +61,15 @@ CDC Weekly 只读订阅官网 RSS，**不抓文章页面**（官网会弹验证�
 | `pmcid` | string \| null | Europe PMC / PMC 的 PMCID（如 `PMC13674758`），由补全步骤填写 |
 | `enriched_at` | string \| null | 最近一次补全写入字段的时间（UTC）；从没补过为 null |
 | `enrich_source` | string \| null | 补全数据来自哪里，目前只有 `europepmc`；与 `enriched_at` 同时为空或同时有值 |
+| `journal` | string \| null | 刊名（v0.3 起；CDC Weekly 取 `<prism:publicationName>`，回补时取 Crossref / PLOS 的刊名） |
+| `volume` / `issue` / `pages` | string \| null | 卷、期、页码（CDC Weekly 取 PRISM 字段；Crossref / PLOS 回补给出的也会填） |
+| `article_type` | string \| null | 栏目 / 文章类型。只有来源给了才填（目前只有 PLOS 回补）；CDC Weekly 的 feed 不带栏目，留空 |
+| `authors` | string[] \| null | 作者。CDC Weekly 的 feed 里作者为空，留空；Crossref / PLOS 回补时填写 |
+| `issue_order` | int \| null | 在本期 feed 里的顺序（0 起），CDC Weekly 按期组织时用 |
+| `feed_url` | string \| null | 这条记录最近一次来自哪个 feed / 接口 |
+
+取不到的字段一律为 null，不推测、不拼造。CDC Weekly 的 `title`、`url` 刻意保留与公卫前沿 `scripts/fetch-ccdc.mjs`
+完全相同的清洗规则（见 `health_sources/adapters/ccdc.py`），下游改读本库后生成的 `data/inbox` 与直接读 RSS 一致。
 
 ### 关键词规则
 
@@ -86,6 +95,29 @@ CDC Weekly 只读订阅官网 RSS，**不抓文章页面**（官网会弹验证�
 - **失败隔离**：单篇请求出错只记一次 `error` 尝试；整个步骤出错只写日志，采集和导出照常完成。
 - 结果写进 `status.json` 的 `last_enrich`（本次统计）和 `enrich_attempts`（累计），每个来源的 `with_summary` / `summary_from_enrich` 也在里面。
 
+## 往期回补（`backfill`）
+
+代码在 `health_sources/backfill.py`，每个来源的往期入口写在 `sources.yaml` 的 `backfill:`。只用官方 feed / API，不抓 HTML 网页：
+
+| 来源 | 往期入口 | 说明 |
+|---|---|---|
+| `cdc_weekly` | `rss/{年}_{期}.xml` | 每期一个请求，间隔 6 秒（官网有验证码风控）；期号元数据对不上的条目丢弃 |
+| `mmwr` | 全量 RSS | 2000+ 条、不按时间排序：流式按 100 条一块解析，只留 `--since` 之后的，再逐条解析下载跳转 |
+| `eurosurveillance` | Crossref `journals/1560-7917/works` | 官网按期 RSS 返回空、目录页是 HTML，所以走 DOI 注册机构的 API |
+| `eid` | Crossref `journals/1080-6059/works` | 官网只有提前在线 feed；Crossref 对 EID 多数只给到「年-月」，`published_at` 记为当月 1 日 |
+| `who_don` | 官方 JSON 接口 `$skip` 分页 | 50 条一页，翻到早于 `--since` 为止 |
+| `ecdc` | taxonomy feed `?page=N` | 4 个子 feed 各自翻页；服务器返回重复页时停止 |
+| `plos_ntds` | PLOS 搜索 API（`doc_type:full` + 日期过滤） | 100 条一页 |
+
+- 每页 / 每期解析完立即写库（按 id 去重合并），不把整段历史读进内存；
+- 一个来源失败不影响其他来源；不改 `source_runs`（每日采集的健康状态），结果写在 `backfill/<来源>.json`；
+- 回补完自动重新导出。往期文章的摘要可再用 `enrich --window-days 120 --max-per-run 1000 --max-seconds 1500` 补。
+
+```bash
+python -m health_sources --data-dir ./data backfill --only cdc_weekly --since 2026-01-01 --year 2026 --issues 28-43
+python -m health_sources --data-dir ./data backfill --only mmwr eurosurveillance who_don eid ecdc plos_ntds --since 2026-08-01
+```
+
 ## 存储与输出
 
 数据目录（服务器上是 `/var/lib/health-sources/`）：
@@ -93,8 +125,10 @@ CDC Weekly 只读订阅官网 RSS，**不抓文章页面**（官网会弹验证�
 ```
 health_sources.sqlite     # 全量记录，按 id 去重/更新；source_runs 表记每个来源最近一次抓取结果
 latest.jsonl              # 最近 30 天（按 published_at）的全部记录，每次运行原子替换
+by-source/<来源>.jsonl    # 每个来源近 400 天的全部记录（按期组织的下游读这里，如公卫前沿取 CDC Weekly 卷期篇目）
+backfill/<来源>.json      # 最近一次往期回补的结果
 exports/YYYY-MM-DD.jsonl  # 每日快照（北京时间日期），保留 90 天
-status.json               # 每个来源的条数、最新日期、stale 数、最近一次成功/失败与错误信息
+status.json               # 每个来源的条数、最新日期、stale 数、最近一次成功/失败与错误信息、by-source 文件大小
 ```
 
 更新规则：同一 id 再次抓到时更新内容，但已有的非空字段不会被空值覆盖，补全写过的字段也不会被 feed 覆盖。

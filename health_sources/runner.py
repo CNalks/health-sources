@@ -65,8 +65,9 @@ def backfill_dois(cfg: dict, store: Store) -> dict:
     return out
 
 
-def run_enrich(cfg: dict, store: Store, now: str, http: Http | None = None, only: list[str] | None = None) -> dict:
-    conf = {**enrich_mod.DEFAULTS, **(cfg.get("enrich") or {})}
+def run_enrich(cfg: dict, store: Store, now: str, http: Http | None = None, only: list[str] | None = None,
+               overrides: dict | None = None) -> dict:
+    conf = {**enrich_mod.DEFAULTS, **(cfg.get("enrich") or {}), **(overrides or {})}
     d = cfg.get("defaults", {})
     http = http or Http(d.get("user_agent", "health-sources/0.1"), conf.get("timeout", 20), conf.get("retries", 1))
     sources = {s["id"]: s for s in cfg["sources"] if not only or s["id"] in only}
@@ -120,22 +121,58 @@ def _atomic_write(path: Path, text: str) -> None:
     os.replace(tmp, path)
 
 
+def _atomic_write_lines(path: Path, lines) -> tuple[int, int]:
+    """逐行写临时文件再原子替换；返回 (行数, 字节数)。"""
+    path.parent.mkdir(parents=True, exist_ok=True)
+    fd, tmp = tempfile.mkstemp(dir=path.parent, prefix=f".{path.name}.")
+    n = size = 0
+    try:
+        with os.fdopen(fd, "w", encoding="utf-8") as fh:
+            for line in lines:
+                fh.write(line)
+                n += 1
+        os.chmod(tmp, 0o644)
+        size = os.path.getsize(tmp)
+        os.replace(tmp, path)
+    except BaseException:
+        if os.path.exists(tmp):
+            os.unlink(tmp)
+        raise
+    return n, size
+
+
+def _jsonl(records):
+    for r in records:
+        yield json.dumps(r, ensure_ascii=False, sort_keys=False) + "\n"
+
+
 def export(store: Store, data_dir: Path, window_days: int = 30, keep_days: int = 90, results: list | None = None,
-           enrich_stats: dict | None = None, retired: dict | None = None) -> dict:
+           enrich_stats: dict | None = None, retired: dict | None = None, by_source_days: int = 400) -> dict:
     now = datetime.now(timezone.utc)
     since = (now - timedelta(days=window_days)).isoformat()
-    records = store.records(since=since)
-    body = "".join(json.dumps(r, ensure_ascii=False, sort_keys=False) + "\n" for r in records)
     day = now.astimezone(BEIJING).date().isoformat()
     exports = data_dir / "exports"
-    _atomic_write(exports / f"{day}.jsonl", body)
-    _atomic_write(data_dir / "latest.jsonl", body)
+    total, _ = _atomic_write_lines(exports / f"{day}.jsonl", _jsonl(store.iter_records(since=since)))
+    _atomic_write_lines(data_dir / "latest.jsonl", _jsonl(store.iter_records(since=since)))
+    # 按来源的长窗口导出：按期组织的下游（如公卫前沿取 CDC Weekly 卷期篇目）读这里
+    bs_since = (now - timedelta(days=by_source_days)).isoformat()
+    by_source = {}
+    present = store.sources_present()
+    for sid in present:
+        n, size = _atomic_write_lines(data_dir / "by-source" / f"{sid}.jsonl",
+                                      _jsonl(store.iter_records(since=bs_since, source=sid)))
+        by_source[sid] = {"records": n, "bytes": size, "path": f"by-source/{sid}.jsonl"}
+    for f in (data_dir / "by-source").glob("*.jsonl"):
+        if f.stem not in present:
+            f.unlink()
     status = {
         "generated_at": now.replace(microsecond=0).isoformat(),
         "window_days": window_days,
-        "total": len(records),
+        "by_source_days": by_source_days,
+        "total": total,
         "sources": store.source_summary(),
         "runs": store.source_runs(),
+        "by_source": by_source,
         "last_run": results or [],
         "last_enrich": enrich_stats or {},
         "enrich_attempts": store.enrich_summary(),
@@ -147,6 +184,11 @@ def export(store: Store, data_dir: Path, window_days: int = 30, keep_days: int =
         if f.stem < cutoff:
             f.unlink()
     return status
+
+
+def export_opts(cfg: dict) -> dict:
+    e = cfg.get("export") or {}
+    return {"window_days": int(e.get("window_days", 30)), "by_source_days": int(e.get("by_source_days", 400))}
 
 
 def run(config_path: str | Path, data_dir: str | Path, only: list[str] | None = None,
@@ -166,7 +208,32 @@ def run(config_path: str | Path, data_dir: str | Path, only: list[str] | None = 
                 continue
             results.append(collect_source(src, http, store, now))
         enrich_stats = run_enrich(cfg, store, now, enrich_http, only) if do_enrich else {"enabled": False}
-        export(store, data_dir, results=results, enrich_stats=enrich_stats, retired=retired)
+        export(store, data_dir, results=results, enrich_stats=enrich_stats, retired=retired, **export_opts(cfg))
     finally:
         store.close()
     return results
+
+
+def run_backfill(config_path: str | Path, data_dir: str | Path, sources: list[str], since: str,
+                 opts: dict | None = None, http: Http | None = None, sleep=None) -> list[dict]:
+    """往期回补指定来源（见 health_sources/backfill.py），之后重新导出。不改 source_runs。"""
+    from . import backfill as bf
+    cfg = load_config(config_path)
+    data_dir = Path(data_dir)
+    d = cfg.get("defaults", {})
+    http = http or Http(d.get("user_agent", "health-sources/0.1"), d.get("timeout", 40), d.get("retries", 2))
+    store = Store(data_dir / "health_sources.sqlite")
+    now = now_iso()
+    out = []
+    try:
+        for src in cfg["sources"]:
+            if sources and src["id"] not in sources:
+                continue
+            kw = {"sleep": sleep} if sleep else {}
+            res = bf.backfill_source(src, store, http, now, since, opts, **kw)
+            bf.write_report(data_dir, res)
+            out.append(res)
+        export(store, data_dir, **export_opts(cfg))
+    finally:
+        store.close()
+    return out

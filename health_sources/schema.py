@@ -26,6 +26,15 @@ FIELDS: dict[str, tuple[type | tuple[type, ...], bool]] = {
     "pmcid": (str, True),
     "enriched_at": (str, True),
     "enrich_source": (str, True),
+    # 期刊卷期信息（v0.3）：feed / 往期入口能给就填，给不了就为 null，不硬造
+    "journal": (str, True),
+    "volume": (str, True),
+    "issue": (str, True),
+    "pages": (str, True),
+    "article_type": (str, True),
+    "authors": (list, True),
+    "issue_order": (int, True),     # 在本期 feed 里的顺序（0 起），按期组织时用
+    "feed_url": (str, True),        # 这条记录最近一次来自哪个 feed / 接口
 }
 
 _ID_RE = re.compile(r"^[0-9a-f]{16}$")
@@ -82,6 +91,10 @@ def validate(record: dict) -> list[str]:
     for name in ("published_at", "fetched_at", "enriched_at"):
         if record[name] is not None and not _is_iso_with_tz(record[name]):
             errors.append(f"{name} must be ISO 8601 with timezone")
+    if record["authors"] is not None and not all(isinstance(a, str) and a.strip() for a in record["authors"]):
+        errors.append("authors must be non-empty strings")
+    if isinstance(record["issue_order"], bool) or (record["issue_order"] is not None and record["issue_order"] < 0):
+        errors.append("issue_order must be a non-negative int")
     kws = record["keywords"]
     if not all(isinstance(k, str) and k.strip() for k in kws):
         errors.append("keywords must be non-empty strings")

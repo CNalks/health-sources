@@ -15,6 +15,8 @@ def good_record(**over):
         "published_at": "2026-10-22T00:00:00+00:00", "url": "https://e.org/a", "doi": None,
         "summary": None, "keywords": ["a"], "license": None, "figures_allowed": False,
         "fetched_at": NOW, "status": "ok", "pmcid": None, "enriched_at": None, "enrich_source": None,
+        "journal": None, "volume": None, "issue": None, "pages": None, "article_type": None,
+        "authors": None, "issue_order": None, "feed_url": None,
     }
     rec.update(over)
     return rec

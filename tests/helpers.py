@@ -24,6 +24,14 @@ def source_cfg(source_id: str) -> dict:
 class FakeResponse:
     def __init__(self, content: bytes):
         self.content = content
+        self.closed = False
+
+    def iter_content(self, size=65536):
+        for i in range(0, len(self.content), size):
+            yield self.content[i:i + size]
+
+    def close(self):
+        self.closed = True
 
 
 class FakeHttp:
@@ -33,6 +41,7 @@ class FakeHttp:
         self.routes = routes
         self.redirects = redirects or {}
         self.calls: list[str] = []
+        self.params: list = []
 
     def _lookup(self, url: str) -> bytes:
         self.calls.append(url)
@@ -42,6 +51,7 @@ class FakeHttp:
         raise ConnectionError(f"offline: {url}")
 
     def get(self, url, params=None, stream=False):
+        self.params.append(params)
         return FakeResponse(self._lookup(url))
 
     def get_text_head(self, url, max_items, end_tag=b"</item>", max_bytes=8_000_000):

@@ -3,7 +3,7 @@
 defaults:
   timeout: 40          # 秒
   retries: 2
-  user_agent: "health-sources/0.2 (+https://github.com/CNalks/health-sources)"
+  user_agent: "health-sources/0.3 (+https://github.com/CNalks/health-sources)"
 
 # 已停用的来源：每次运行开始时删除库里它们的记录（不再导出）
 retired_sources:
@@ -22,6 +22,12 @@ enrich:
   max_seconds: 300       # 整个步骤的时间预算
   figures_allowed_licenses: ["cc0", "cc by", "cc by-sa"]   # 仅对 figures_allowed: per_record 的来源生效
 
+# 导出：latest.jsonl 只放近 window_days 天（日常消费）；by-source/<来源>.jsonl 放近 by_source_days 天的全部记录，
+# 供按期组织的下游（公卫前沿按卷期取 CDC Weekly 篇目）使用
+export:
+  window_days: 30
+  by_source_days: 400
+
 sources:
   - id: mmwr
     name: "MMWR (Morbidity and Mortality Weekly Report)"
@@ -36,6 +42,10 @@ sources:
     ignore_categories: ["MMWR", "Morbidity & Mortality Weekly Report"]
     ignore_summaries:      # feed 里的通用占位描述，不当摘要
       - "The Morbidity and Mortality Weekly Report (MMWR) Series is prepared by the Centers for Disease Control and Prevention (CDC)."
+    backfill:              # 全量 feed 本身就是往期入口：流式分块读，条目不按时间排序，只留 since 之后的
+      method: full_feed
+      batch_items: 100
+      delay_seconds: 0.5   # 解析下载跳转（HEAD）之间的间隔
 
   - id: eurosurveillance
     name: "Eurosurveillance"
@@ -47,6 +57,14 @@ sources:
     doi_from_url: true
     license: "CC BY 4.0"
     figures_allowed: true
+    backfill:              # 官网按期 RSS 返回空、目录页是 HTML；改用 DOI 注册机构 Crossref 的官方 API 按 ISSN 列出
+      method: crossref
+      url: "https://api.crossref.org/journals/{issn}/works"
+      issn: "1560-7917"
+      url_style: prefix
+      url_prefix: "https://www.eurosurveillance.org/content/"
+      rows: 100
+      delay_seconds: 1.0
 
   - id: who_don
     name: "WHO Disease Outbreak News"
@@ -58,6 +76,10 @@ sources:
     max_items: 20
     license: "CC BY-NC-SA 3.0 IGO"
     figures_allowed: false   # NC-SA：非商用+相同方式共享，默认不配图
+    backfill:
+      method: odata_pages
+      page_size: 50
+      delay_seconds: 1.0
 
   - id: eid
     name: "Emerging Infectious Diseases (ahead of print)"
@@ -69,6 +91,13 @@ sources:
     doi_from_url: true
     license: "Public Domain (U.S. CDC)"
     figures_allowed: true
+    backfill:              # 官网只有提前在线 feed，没有按期 feed；用 Crossref 按 ISSN 列出（含已归期文章）
+      method: crossref
+      url: "https://api.crossref.org/journals/{issn}/works"
+      issn: "1080-6059"
+      url_style: eid
+      rows: 100
+      delay_seconds: 1.0
 
   - id: ecdc
     name: "ECDC (CDTR / Risk assessment / Epidemiological update / News)"
@@ -87,6 +116,11 @@ sources:
     max_items: 20          # 每个 feed
     license: "© ECDC, reproduction authorised provided the source is acknowledged"
     figures_allowed: true
+    backfill:              # taxonomy feed 支持 ?page=N（Drupal 分页）
+      method: feed_pages
+      page_param: page
+      max_pages: 15
+      delay_seconds: 2.0
 
   - id: plos_ntds
     name: "PLOS Neglected Tropical Diseases"
@@ -97,10 +131,17 @@ sources:
     max_items: 50
     license: "CC BY 4.0"
     figures_allowed: true
+    backfill:              # PLOS 官方搜索 API（Solr）
+      method: plos_search
+      url: "https://api.plos.org/search"
+      journal_key: PLoSNTD
+      article_url: "https://journals.plos.org/plosntds/article?id={doi}"
+      rows: 100
+      delay_seconds: 1.5
 
   - id: cdc_weekly
     name: "China CDC Weekly (current issue)"
-    adapter: rss           # RSS 1.0 / RDF，条目自带 <prism:doi>
+    adapter: ccdc          # RSS 1.0 / RDF，条目自带 <prism:doi> 和 PRISM 卷期字段（解析与公卫前沿 fetch-ccdc.mjs 一致）
     kind: article
     lang: en
     url: "https://weekly.chinacdc.cn/rss/current.xml"
@@ -109,3 +150,7 @@ sources:
     # 只读订阅 RSS，不抓文章页面（官网会弹验证码）；公卫前沿自己的采集（火山云 cdc-ingest）不受影响
     license: "CC BY-NC 4.0"
     figures_allowed: false
+    backfill:              # 往期 RSS：rss/{年}_{期}.xml；官网有频率风控，请求间隔放宽
+      method: ccdc_issues
+      url_template: "https://weekly.chinacdc.cn/rss/{year}_{issue}.xml"
+      delay_seconds: 6
