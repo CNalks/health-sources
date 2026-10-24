@@ -1,0 +1,59 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom" xmlns:media="http://search.yahoo.com/mrss/" xmlns:googleplay="http://www.google.com/schemas/play-podcasts/1.0">
+<channel>
+<title>Morbidity and Mortality Weekly Report (MMWR)</title>
+<googleplay:author>imtech@cdc.gov</googleplay:author>
+<googleplay:email>imtech@cdc.gov</googleplay:email>
+<googleplay:description>This Week&#39;s Issue of MMWR.  Also includes the latest MMWR Recommendations and Reports and MMWR Surveillance Summaries.</googleplay:description>
+<description>This Week&#39;s Issue of MMWR.  Also includes the latest MMWR Recommendations and Reports and MMWR Surveillance Summaries.</description>
+<language>en</language>
+<pubDate>Fri, 06 Jan 2023 18:00:00 GMT</pubDate>
+<lastBuildDate>Wed, 17 Jun 2026 16:31:16 GMT</lastBuildDate>
+<link>https://www.cdc.gov/mmwr/index.html</link>
+<atom:link href="https://www.cdc.gov/mmwr/index.html" rel="self" type="application/rss+xml" />
+<copyright>Centers for Disease Control and Prevention (CDC)</copyright>
+<webMaster>imtech@cdc.gov (imtech@cdc.gov)</webMaster>
+<category>Public Health</category>
+<category>Whats New</category>
+<category>Covid Journal Content</category>
+<category>Whats-New MMWR</category>
+<category>poxvirus-730339-1</category>
+<category>wcms-730836-1</category>
+<item>
+<title>Notes from the Field: Nontuberculous Mycobacteria Infections After Cosmetic Surgery Procedures in Mexico - United States, April-September 2025</title>
+<description>The Morbidity and Mortality Weekly Report (MMWR) Series is prepared by the Centers for Disease Control and Prevention (CDC).</description>
+<link>https://tools.cdc.gov/api/embed/downloader/download.asp?m=342778&amp;c=766718</link>
+<guid isPermaLink="true">https://tools.cdc.gov/api/embed/downloader/download.asp?m=342778&amp;c=766718&amp;_=6410E2763D067E539E7A3C821A02343EC1B2637727D35967D494F7CB177DB7B9</guid>
+<pubDate>Thu, 22 Oct 2026 17:00:00 GMT</pubDate>
+<category>MMWR</category>
+<category>Morbidity &amp; Mortality Weekly Report</category>
+</item>
+<item>
+<title>Acute Kidney Injury Among Patients with Drug Overdose-Involved Hospitalizations - United States, 2016-2025</title>
+<description>The Morbidity and Mortality Weekly Report (MMWR) Series is prepared by the Centers for Disease Control and Prevention (CDC).</description>
+<link>https://tools.cdc.gov/api/embed/downloader/download.asp?m=342778&amp;c=766717</link>
+<guid isPermaLink="true">https://tools.cdc.gov/api/embed/downloader/download.asp?m=342778&amp;c=766717&amp;_=6FA2DB3BDFEA07107E36425C17176C152B03A5C8B74AC2565DF185E6020AB2E6</guid>
+<pubDate>Thu, 22 Oct 2026 17:00:00 GMT</pubDate>
+<category>MMWR</category>
+<category>Morbidity &amp; Mortality Weekly Report</category>
+</item>
+<item>
+<title>Notes from the Field: Molecular Detections of Cladophialophora bantiana at a Clinical Reference Laboratory - United States, 2009-2026</title>
+<description>This report describes 48 confirmed cases and one probable case of C. bantiana in clinical samples from 2009-2026.</description>
+<link>https://tools.cdc.gov/api/embed/downloader/download.asp?m=342778&amp;c=766563</link>
+<guid isPermaLink="true">https://tools.cdc.gov/api/embed/downloader/download.asp?m=342778&amp;c=766563&amp;_=3A50B2026590EF38FDB0E4FAC0C5D060120DD1D7857FB6A199FD2D17CD4674D0</guid>
+<pubDate>Thu, 15 Oct 2026 19:42:00 GMT</pubDate>
+<category>MMWR</category>
+<category>Morbidity &amp; Mortality Weekly Report</category>
+</item>
+<item>
+<title>Effectiveness of Diphtheria and Tetanus Toxoids and Acellular Pertussis Vaccine in Children Aged 6 Months-6 Years During a Statewide Pertussis Outbreak - Alaska, May-November 2024</title>
+<description>This report describes effectiveness of the diphtheria and tetanus toxoids and acellular pertussis vaccination series during a statewide pertussis outbreak in Alaska during 2024. </description>
+<link>https://tools.cdc.gov/api/embed/downloader/download.asp?m=342778&amp;c=766649</link>
+<guid isPermaLink="true">https://tools.cdc.gov/api/embed/downloader/download.asp?m=342778&amp;c=766649&amp;_=1BBEE6618761166CC3167FE4B16590D98AB9D0569C212E3FBE792F395195B002</guid>
+<pubDate>Thu, 15 Oct 2026 19:42:00 GMT</pubDate>
+<category>MMWR</category>
+<category>Morbidity &amp; Mortality Weekly Report</category>
+</item>
+</channel>
+</rss>

@@ -1,0 +1,28 @@
+<?xml version="1.0" encoding="utf-8"?>
+<rss xmlns:dc="http://purl.org/dc/elements/1.1/" version="2.0" xml:base="https://www.ecdc.europa.eu/en">
+  <channel>
+    <title>Risk assessment</title>
+    <link>https://www.ecdc.europa.eu/en</link>
+    <description/>
+    <language>en</language>
+    
+    <item>
+  <title>Threat assessment brief – Importation of Ebola disease cases caused by Bundibugyo virus to Kenya and Nigeria</title>
+  <link>https://www.ecdc.europa.eu/en/publications-data/threat-assessment-brief-importation-ebola-disease-cases-caused-bundibugyo-virus</link>
+  <description>&lt;p&gt;This Threat Assessment Brief assesses the risk for people from the EU/EEA living in or travelling to Kenya and Nigeria, and the overall risk for the general EU/EEA population. It is intended for public health authorities in the EU/EEA.&lt;/p&gt;
+</description>
+  <pubDate>Fri, 23 Oct 2026 16:41:23 +0200</pubDate>
+    <dc:creator>ECDC</dc:creator>
+    <guid isPermaLink="true">https://www.ecdc.europa.eu/en/publications-data/threat-assessment-brief-importation-ebola-disease-cases-caused-bundibugyo-virus</guid>
+    </item>
+<item>
+  <title>Rapid outbreak assessment – Multi-country outbreak of Salmonella Bovismorbificans ST377 infections linked to the consumption of alfalfa sprouted seeds</title>
+  <link>https://www.ecdc.europa.eu/en/publications-data/rapid-outbreak-assessment-multi-country-outbreak-salmonella-bovismorbificans</link>
+  <description>&lt;p&gt;Between January and May 2026, 109 confirmed cases of Salmonella Bovismorbificans ST377 were reported from 10 European Union/European Economic Area (EU/EEA) countries (Austria, Belgium, Czechia, Denmark, Finland, Germany, Ireland, Luxembourg, Spain and the Netherlands) and the United Kingdom.&lt;/p&gt;
+</description>
+  <pubDate>Thu, 25 Jun 2026 14:01:42 +0200</pubDate>
+    <dc:creator>ECDC</dc:creator>
+    <guid isPermaLink="true">https://www.ecdc.europa.eu/en/publications-data/rapid-outbreak-assessment-multi-country-outbreak-salmonella-bovismorbificans</guid>
+    </item>
+</channel>
+</rss>

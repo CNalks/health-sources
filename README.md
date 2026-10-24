@@ -1,0 +1,125 @@
+# health-sources
+
+公卫文章与新闻/通报的**共享采集层**。每天从固定来源抓取最新条目，规范成统一字段，
+写入 SQLite 并导出 JSONL 快照，供下游产品各取所需：
+
+- **公卫前沿**（CNalks/CDC-Weekly-Digest）三阶段：从 `kind=article` 里挑文章再走自己的出稿流程；
+- **Global Health Signals**（CNalks/ai4health-global）：从 `kind=news` 里取疫情事件/官方通报。
+
+当前阶段只做到「采集并写文件试跑」，**没有接任何下游**。
+
+## 定位与边界
+
+- 只收两类：`article`（期刊文章）和 `news`（新闻/通报）。
+- **不收**时间序列数据（病例数、阳性率等），那些继续留在 GHS 自己的管线里。
+- 字典只有「统一字段 + 关键词」：不做病种词表、国家词表、ICD 编码。
+- 不调大模型：关键词优先用原文自带的期刊关键词 / RSS category，没有就从标题按规则提取。
+
+## 第一批来源（`sources.yaml`）
+
+| id | 来源 | kind | 方式 | license | figures_allowed |
+|---|---|---|---|---|---|
+| `mmwr` | MMWR | article | RSS（只流式读最新 30 条，解析跳转得到原文 URL 和 DOI） | Public Domain | true |
+| `eurosurveillance` | Eurosurveillance | article | RSS | CC BY 4.0 | true |
+| `who_don` | WHO Disease Outbreak News | news | JSON API，按 `PublicationDateAndTime` 倒序 | CC BY-NC-SA 3.0 IGO | false |
+| `eid` | Emerging Infectious Diseases（提前在线） | article | RSS | Public Domain | true |
+| `ecdc` | ECDC：CDTR / 风险评估 / 疫情更新 / 新闻 | news | 4 个 RSS 子 feed | 注明出处即可转载 | true |
+| `plos_ntds` | PLOS NTDs | article | Atom | CC BY 4.0 | true |
+| `europepmc` | Europe PMC（最近 7 天、开放获取、公卫/传染病检索式） | article | REST search | 按每篇许可 | 仅 CC0 / CC BY / CC BY-SA 为 true |
+
+`license`、`figures_allowed` 在 `sources.yaml` 里按来源设定；Europe PMC 为 `per_record`，按每篇文章自己的许可判断。
+
+## 统一字段
+
+每条记录（JSONL 一行）恰好包含以下字段，由 `health_sources/schema.py` 校验：
+
+| 字段 | 类型 | 说明 |
+|---|---|---|
+| `id` | string | 16 位十六进制。有 DOI 时为 `sha1("doi:"+小写DOI)`，否则为 `sha1("url:"+规范化URL)` 的前 16 位。Europe PMC 固定用 URL（`europepmc.org/article/PMC/<PMCID>`），避免 DOI 晚到导致同一篇变两条 |
+| `source` | string | 来源 id，见上表 |
+| `kind` | `article` \| `news` | |
+| `title` | string | 去掉 HTML 标签后的原文标题 |
+| `lang` | string | ISO 639-1，目前都是 `en` |
+| `published_at` | string \| null | ISO 8601，带时区（统一为 UTC `+00:00`） |
+| `url` | string | 规范化 URL：小写域名、去掉 `utm_*`/`TRACK`/`s_cid` 等跟踪参数和锚点 |
+| `doi` | string \| null | 小写 DOI；MMWR、EID 由 URL 规则推出 |
+| `summary` | string \| null | 纯文本摘要，最长约 1200 字符；feed 没有摘要时为 null |
+| `keywords` | string[] | 优先原文关键词 / RSS category（最多 6 个）；没有则从标题提取 3–5 个短语（标题太短时可能更少） |
+| `license` | string \| null | 许可说明 |
+| `figures_allowed` | bool | 下游能否配原文图表 |
+| `fetched_at` | string | 最近一次成功抓到这条记录的时间（UTC） |
+| `status` | `ok` \| `stale` | `stale` 表示该来源最近一次抓取失败，这条是沿用的旧数据 |
+
+### 关键词规则
+
+1. 原文自带：Europe PMC 的 `keywordList`、RSS/Atom 的 `<category>`、ECDC 子 feed 栏目名（如 `Risk assessment`）。
+   每个来源可用 `ignore_categories` 去掉无意义的通用分类（如 MMWR 的 `MMWR`）。
+2. 否则从标题提取：用停用词表（含月份、"United States" 等）和标点把标题切成短语，
+   按精简版 RAKE 打分取前 3–5 个，丢掉年份、日期区间等数字。代码在 `health_sources/keywords.py`。
+
+## 存储与输出
+
+数据目录（服务器上是 `/var/lib/health-sources/`）：
+
+```
+health_sources.sqlite     # 全量记录，按 id 去重/更新；source_runs 表记每个来源最近一次抓取结果
+latest.jsonl              # 最近 30 天（按 published_at）的全部记录，每次运行原子替换
+exports/YYYY-MM-DD.jsonl  # 每日快照（北京时间日期），保留 90 天
+status.json               # 每个来源的条数、最新日期、stale 数、最近一次成功/失败与错误信息
+```
+
+更新规则：同一 id 再次抓到时更新内容，但已有的非空字段不会被空值覆盖。
+
+### 失败隔离
+
+每个来源单独 try/except。某个来源失败时：它在库里的旧记录全部标为 `status=stale` 并照常导出，
+`status.json` 里记录错误；其他来源不受影响。下次抓取成功后自动恢复为 `ok`。
+ECDC 的 4 个子 feed 也是各自独立，坏一个只记 warning。
+
+## 运行
+
+```bash
+python3 -m venv .venv && .venv/bin/pip install -r requirements.txt
+
+# 抓全部来源，写到 ./data
+.venv/bin/python -m health_sources --data-dir ./data run
+# 只抓某几个来源
+.venv/bin/python -m health_sources --data-dir ./data run --only who_don ecdc
+# 只从 SQLite 重新导出
+.venv/bin/python -m health_sources --data-dir ./data export
+# 校验 latest.jsonl 每条记录
+.venv/bin/python -m health_sources --data-dir ./data validate
+```
+
+依赖只有 `feedparser`、`requests`、`PyYAML`。
+
+### 测试（离线，用 `tests/fixtures/` 里的本地样本）
+
+```bash
+.venv/bin/python -m unittest discover -s tests -t .
+```
+
+不用 GitHub Actions。
+
+## 部署（阿里云北京）
+
+- 代码：`/opt/health-sources`（venv 在 `.venv`，不改系统 Python）
+- 数据：`/var/lib/health-sources/`，属主为系统用户 `health-sources`
+- 定时：`deploy/health-sources.timer`，每天 10:30（北京时间）；`Persistent=true`，错过会补跑
+- 资源：`MemoryMax=150M`、`MemorySwapMax=0`、`CPUQuota=50%`、`Nice=10`、IO idle；`ProtectSystem=strict`，只允许写数据目录
+- 安装：代码放到 `/opt/health-sources` 后以 root 运行 `deploy/install.sh`
+
+```bash
+systemctl list-timers health-sources.timer     # 下次运行时间
+systemctl start health-sources.service         # 手动跑一次
+journalctl -u health-sources.service -n 50     # 日志（含峰值内存）
+cat /var/lib/health-sources/status.json
+```
+
+## 新增来源
+
+1. 在 `sources.yaml` 加一项（`id`、`adapter`、`kind`、`url`、`license`、`figures_allowed`）。
+2. 普通 RSS/Atom 直接用 `adapter: rss`；特殊接口在 `health_sources/adapters/` 加一个模块，实现
+   `fetch(cfg, http, fetched_at)`（联网）和 `parse(payload, cfg, fetched_at)`（纯解析，便于测试），
+   并在 `adapters/__init__.py` 注册。
+3. 在 `tests/fixtures/` 放一份裁剪过的样本，补测试。

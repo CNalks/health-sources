@@ -1,0 +1,101 @@
+# 来源清单：每个来源一个适配器（adapter），license / figures_allowed 按来源设定。
+# Europe PMC 例外：license 与 figures_allowed 按每篇文章自己的许可判断（per_record）。
+defaults:
+  timeout: 40          # 秒
+  retries: 2
+  user_agent: "health-sources/0.1 (+https://github.com/CNalks/health-sources)"
+
+sources:
+  - id: mmwr
+    name: "MMWR (Morbidity and Mortality Weekly Report)"
+    adapter: mmwr
+    kind: article
+    lang: en
+    url: "https://tools.cdc.gov/api/v2/resources/media/342778.rss"
+    max_items: 30          # feed 有 2000+ 条，只截取最新 N 条再解析
+    resolve_links: true    # 把 tools.cdc.gov 下载跳转解析成 cdc.gov/mmwr 原文地址
+    license: "Public Domain (U.S. CDC)"
+    figures_allowed: true
+    ignore_categories: ["MMWR", "Morbidity & Mortality Weekly Report"]
+    ignore_summaries:      # feed 里的通用占位描述，不当摘要
+      - "The Morbidity and Mortality Weekly Report (MMWR) Series is prepared by the Centers for Disease Control and Prevention (CDC)."
+
+  - id: eurosurveillance
+    name: "Eurosurveillance"
+    adapter: rss
+    kind: article
+    lang: en
+    url: "https://www.eurosurveillance.org/rss/content/eurosurveillance/latestarticles?fmt=rss"
+    max_items: 50
+    doi_from_url: true
+    license: "CC BY 4.0"
+    figures_allowed: true
+
+  - id: who_don
+    name: "WHO Disease Outbreak News"
+    adapter: who_don
+    kind: news
+    lang: en
+    url: "https://www.who.int/api/news/diseaseoutbreaknews"
+    item_url_prefix: "https://www.who.int/emergencies/disease-outbreak-news/item/"
+    max_items: 20
+    license: "CC BY-NC-SA 3.0 IGO"
+    figures_allowed: false   # NC-SA：非商用+相同方式共享，默认不配图
+
+  - id: eid
+    name: "Emerging Infectious Diseases (ahead of print)"
+    adapter: rss
+    kind: article
+    lang: en
+    url: "https://wwwnc.cdc.gov/eid/rss/ahead-of-print.xml"
+    max_items: 50
+    doi_from_url: true
+    license: "Public Domain (U.S. CDC)"
+    figures_allowed: true
+
+  - id: ecdc
+    name: "ECDC (CDTR / Risk assessment / Epidemiological update / News)"
+    adapter: rss
+    kind: news
+    lang: en
+    feeds:
+      - url: "https://www.ecdc.europa.eu/en/taxonomy/term/1505/feed"
+        category: "Communicable disease threats report"
+      - url: "https://www.ecdc.europa.eu/en/taxonomy/term/1295/feed"
+        category: "Risk assessment"
+      - url: "https://www.ecdc.europa.eu/en/taxonomy/term/1310/feed"
+        category: "Epidemiological update"
+      - url: "https://www.ecdc.europa.eu/en/taxonomy/term/1307/feed"
+        category: "News"
+    max_items: 20          # 每个 feed
+    license: "© ECDC, reproduction authorised provided the source is acknowledged"
+    figures_allowed: true
+
+  - id: plos_ntds
+    name: "PLOS Neglected Tropical Diseases"
+    adapter: rss
+    kind: article
+    lang: en
+    url: "https://journals.plos.org/plosntds/feed/atom"
+    max_items: 50
+    license: "CC BY 4.0"
+    figures_allowed: true
+
+  - id: europepmc
+    name: "Europe PMC (open access, public health / infectious disease)"
+    adapter: europepmc
+    kind: article
+    id_from: url           # 用 europepmc.org/article/PMC/<PMCID> 做 id，DOI 晚到也不重复
+    lang: en
+    url: "https://www.ebi.ac.uk/europepmc/webservices/rest/search"
+    days: 7                # 只取最近几天首发、开放获取的文章
+    page_size: 100
+    # 只要 MED/PMC：排除预印本（PPR）和书籍章节（NBK）
+    query: >-
+      (TITLE:outbreak OR TITLE:surveillance OR TITLE:epidemic OR TITLE:pandemic
+      OR TITLE:"public health" OR TITLE:"infectious disease" OR TITLE:transmission
+      OR TITLE:vaccination OR TITLE:"emerging infection")
+      AND OPEN_ACCESS:y AND (SRC:MED OR SRC:PMC)
+    license: per_record
+    figures_allowed: per_record
+    figures_allowed_licenses: ["cc0", "cc by", "cc by-sa"]   # 含 NC / ND 的不配图

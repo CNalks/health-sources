@@ -1,0 +1,82 @@
+"""统一字段定义与校验（不依赖第三方库）。"""
+from __future__ import annotations
+
+import re
+from datetime import datetime
+
+KINDS = ("article", "news")
+STATUSES = ("ok", "stale")
+
+# 字段名 -> (类型, 是否允许为空)
+FIELDS: dict[str, tuple[type | tuple[type, ...], bool]] = {
+    "id": (str, False),
+    "source": (str, False),
+    "kind": (str, False),
+    "title": (str, False),
+    "lang": (str, False),
+    "published_at": (str, True),
+    "url": (str, False),
+    "doi": (str, True),
+    "summary": (str, True),
+    "keywords": (list, False),
+    "license": (str, True),
+    "figures_allowed": (bool, False),
+    "fetched_at": (str, False),
+    "status": (str, False),
+}
+
+_ID_RE = re.compile(r"^[0-9a-f]{16}$")
+_DOI_RE = re.compile(r"^10\.\d{4,9}/\S+$")
+
+
+def _is_iso_with_tz(value: str) -> bool:
+    try:
+        dt = datetime.fromisoformat(value.replace("Z", "+00:00"))
+    except ValueError:
+        return False
+    return dt.tzinfo is not None
+
+
+def validate(record: dict) -> list[str]:
+    """返回错误列表；空列表表示合法。"""
+    errors: list[str] = []
+    extra = set(record) - set(FIELDS)
+    if extra:
+        errors.append(f"unknown fields: {sorted(extra)}")
+    for name, (typ, nullable) in FIELDS.items():
+        if name not in record:
+            errors.append(f"missing field: {name}")
+            continue
+        value = record[name]
+        if value is None:
+            if not nullable:
+                errors.append(f"{name} must not be null")
+            continue
+        if not isinstance(value, typ):
+            errors.append(f"{name} has wrong type {type(value).__name__}")
+            continue
+        if typ is str and not nullable and not value.strip():
+            errors.append(f"{name} must not be empty")
+    if errors:
+        return errors
+    if not _ID_RE.match(record["id"]):
+        errors.append("id must be 16 lowercase hex chars")
+    if record["kind"] not in KINDS:
+        errors.append(f"kind must be one of {KINDS}")
+    if record["status"] not in STATUSES:
+        errors.append(f"status must be one of {STATUSES}")
+    if not re.match(r"^[a-z]{2}$", record["lang"]):
+        errors.append("lang must be ISO 639-1 (2 lowercase letters)")
+    if not record["url"].startswith(("http://", "https://")):
+        errors.append("url must be http(s)")
+    if record["doi"] is not None and not _DOI_RE.match(record["doi"]):
+        errors.append("doi malformed")
+    for name in ("published_at", "fetched_at"):
+        if record[name] is not None and not _is_iso_with_tz(record[name]):
+            errors.append(f"{name} must be ISO 8601 with timezone")
+    kws = record["keywords"]
+    if not all(isinstance(k, str) and k.strip() for k in kws):
+        errors.append("keywords must be non-empty strings")
+    if len(kws) > 10:
+        errors.append("keywords at most 10")
+    return errors

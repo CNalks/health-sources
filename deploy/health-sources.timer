@@ -1,0 +1,10 @@
+[Unit]
+Description=Run health-sources daily at 10:30 Beijing time
+
+[Timer]
+OnCalendar=*-*-* 10:30:00 Asia/Shanghai
+Persistent=true
+Unit=health-sources.service
+
+[Install]
+WantedBy=timers.target

@@ -1,0 +1,36 @@
+<?xml version="1.0" encoding="utf-8"?>
+<rss version="2.0">
+    <channel>
+        <title>Emerging Infectious Diseases Journal</title>
+        <description>This list contains articles published online early release.</description>
+        <link>https://wwwnc.cdc.gov/eid/early-release</link>
+        <image>
+            <title>Emerging Infectious Diseases Journal</title>
+            <url>https://wwwnc.cdc.gov/eid/images/og-eid-logo-2.jpg</url>
+            <link>https://wwwnc.cdc.gov/eid/early-release</link>
+            <width>1200</width>
+            <height>630</height>
+            <description>Visit EID</description>
+        </image>
+        <language>en-us</language>
+        <webMaster>eideditor@cdc.gov (EID Questions)</webMaster>
+                <item>
+                    <title>Identification of Zoonotic Pteropine orthoreovirus in Rousettus amplexicaudatus Fruit Bats, Indonesia</title>
+                    <description>N. Dharmayanti et al.</description>
+                    <link>https://wwwnc.cdc.gov/eid/article/32/12/25-1991_article</link>
+                    <pubDate>Fri, 23 Oct 2026 04:00:00 GMT</pubDate>
+                </item> 
+                <item>
+                    <title>Typhoid Fever–Like Manifestation of Scrub Typhus in Patient with Myelodysplastic Syndrome, China, 2025</title>
+                    <description>Y. Li et al.</description>
+                    <link>https://wwwnc.cdc.gov/eid/article/32/12/26-0686_article</link>
+                    <pubDate>Fri, 23 Oct 2026 04:00:00 GMT</pubDate>
+                </item> 
+                <item>
+                    <title>Isolation of Orientia tsutsugamushi from Bat-Associated Chiggers, Japan</title>
+                    <description>Y. Qiu et al.</description>
+                    <link>https://wwwnc.cdc.gov/eid/article/32/12/26-1156_article</link>
+                    <pubDate>Thu, 22 Oct 2026 04:00:00 GMT</pubDate>
+                </item>
+</channel>
+</rss>

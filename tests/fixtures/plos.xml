@@ -1,0 +1,170 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<feed xmlns="http://www.w3.org/2005/Atom">
+  <title>PLOS Neglected Tropical Diseases</title>
+  <link rel="alternate" href="https://journals.plos.org/plosntds/" />
+  <author>
+    <name>PLOS</name>
+    <uri>https://journals.plos.org/plosntds/</uri>
+    <email>customercare@plos.org</email>
+  </author>
+  <subtitle type="text">A Peer-Reviewed Open-Access Journal</subtitle>
+  <id>https://journals.plos.org/plosntds/feed/atom</id>
+  <rights>All PLOS articles are Open Access.</rights>
+  <icon>https://journals.plos.org/plosntds/resource/img/favicon.ico</icon>
+  <logo>https://journals.plos.org/plosntds/resource/img/favicon.ico</logo>
+  <updated>2026-10-24T19:26:29Z</updated>
+  <entry>
+    <title>Massive envenomations by bees in French Guiana: A ten-year retrospective study (2014–2023)</title>
+    <link rel="alternate" href="https://journals.plos.org/plosntds/article?id=10.1371/journal.pntd.0014824" title="Massive envenomations by bees in French Guiana: A ten-year retrospective study (2014–2023)" />
+    <link rel="related" type="application/pdf" href="https://journals.plos.org/plosntds/article/asset?id=10.1371/journal.pntd.0014824.PDF" title="(PDF) Massive envenomations by bees in French Guiana: A ten-year retrospective study (2014–2023)" />
+    <link rel="related" type="text/xml" href="https://journals.plos.org/plosntds/article/asset?id=10.1371/journal.pntd.0014824.XML" title="(XML) Massive envenomations by bees in French Guiana: A ten-year retrospective study (2014–2023)" />
+    <author>
+      <name>Rémy Blaud</name>
+    </author>
+    <author>
+      <name>Rémi Mutricy</name>
+    </author>
+    <author>
+      <name>Florian Negrello</name>
+    </author>
+    <author>
+      <name>Marie Eeckhout</name>
+    </author>
+    <author>
+      <name>Loïc Epelboin</name>
+    </author>
+    <author>
+      <name>Maylis Douine</name>
+    </author>
+    <author>
+      <name>Hatem Kallel</name>
+    </author>
+    <author>
+      <name>Alexis Fremery</name>
+    </author>
+    <id>10.1371/journal.pntd.0014824</id>
+    <updated>2026-10-23T14:00:00Z</updated>
+    <published>2026-10-23T14:00:00Z</published>
+    <content type="html">&lt;p&gt;by Rémy Blaud, Rémi Mutricy, Florian Negrello, Marie Eeckhout, Loïc Epelboin, Maylis Douine, Hatem Kallel, Alexis Fremery&lt;/p&gt;
+Background &lt;p&gt;Massive bee stings can cause systemic manifestations and life-threatening complications. In French Guiana, data on such envenomations are scarce. This study aimed to describe the epidemiology, clinical characteristics, and management of patients presenting to the emergency department.&lt;/p&gt; Methods &lt;p&gt;We retrospectively reviewed medical records of all patients admitted for bee stings over the period 2014–2023 at Cayenne Hospital. A composite variable of systemic involvement was created (neurological, respiratory, hemodynamic and digestive). All analyses were descriptive. An exploratory two-graph receiver operating characteristic (TG-ROC) analysis was used to describe the sensitivity and specificity of sting-count cut-offs for four binary indicators of systemic involvement.&lt;/p&gt; Results &lt;p&gt;Among 143 patients included, 40% (n = 57) presented at least one systemic manifestation. The median number of stings was 50 [20–150]. In the exploratory TG-ROC analysis, the cut-offs maximizing the Youden index were approximately 72 stings for digestive and hemodynamic manifestations and 99 stings for neurological and respiratory manifestations, with modest sensitivity (0.50–0.76) and specificity (0.68–0.76). Overall mortality was low (0.7%, n = 1/143).&lt;/p&gt; Conclusions &lt;p&gt;This study provides the first detailed epidemiological and clinical description of massive bee envenomations in French Guiana. Exploratory analyses suggested that systemic manifestations may occur at sting counts below the conventional 200-sting threshold. These findings should not be interpreted as a validated clinical cutoff and require confirmation in prospective multicenter studies.&lt;/p&gt;</content>
+  </entry>
+  <entry>
+    <title>Vector competence of &lt;i&gt;Aedes albopictus&lt;/i&gt; and &lt;i&gt;Culex quinquefasciatus&lt;/i&gt; for Oropouche virus</title>
+    <link rel="alternate" href="https://journals.plos.org/plosntds/article?id=10.1371/journal.pntd.0014656" title="Vector competence of &lt;i&gt;Aedes albopictus&lt;/i&gt; and &lt;i&gt;Culex quinquefasciatus&lt;/i&gt; for Oropouche virus" />
+    <link rel="related" type="application/pdf" href="https://journals.plos.org/plosntds/article/asset?id=10.1371/journal.pntd.0014656.PDF" title="(PDF) Vector competence of &lt;i&gt;Aedes albopictus&lt;/i&gt; and &lt;i&gt;Culex quinquefasciatus&lt;/i&gt; for Oropouche virus" />
+    <link rel="related" type="text/xml" href="https://journals.plos.org/plosntds/article/asset?id=10.1371/journal.pntd.0014656.XML" title="(XML) Vector competence of &lt;i&gt;Aedes albopictus&lt;/i&gt; and &lt;i&gt;Culex quinquefasciatus&lt;/i&gt; for Oropouche virus" />
+    <author>
+      <name>Angel Elma I. Abu</name>
+    </author>
+    <author>
+      <name>Xinyi Hua</name>
+    </author>
+    <author>
+      <name>Rachel Sattler</name>
+    </author>
+    <author>
+      <name>Margaret V. Becker</name>
+    </author>
+    <author>
+      <name>Julia Forato</name>
+    </author>
+    <author>
+      <name>Shirlene T. S. de Lima</name>
+    </author>
+    <author>
+      <name>Ingra M. Claro</name>
+    </author>
+    <author>
+      <name>Gabriel C. Scachetti</name>
+    </author>
+    <author>
+      <name>Leda M. Simões Mello</name>
+    </author>
+    <author>
+      <name>Maria Anice M. Sallum</name>
+    </author>
+    <author>
+      <name>Kenneth S. Plante</name>
+    </author>
+    <author>
+      <name>Scott C. Weaver</name>
+    </author>
+    <author>
+      <name>José Luiz Proenca-Modena</name>
+    </author>
+    <author>
+      <name>William M. de Souza</name>
+    </author>
+    <author>
+      <name>Laura B. Dickson</name>
+    </author>
+    <id>10.1371/journal.pntd.0014656</id>
+    <updated>2026-10-23T14:00:00Z</updated>
+    <published>2026-10-23T14:00:00Z</published>
+    <content type="html">&lt;p&gt;by Angel Elma I. Abu, Xinyi Hua, Rachel Sattler, Margaret V. Becker, Julia Forato, Shirlene T. S. de Lima, Ingra M. Claro, Gabriel C. Scachetti, Leda M. Simões Mello, Maria Anice M. Sallum, Kenneth S. Plante, Scott C. Weaver, José Luiz Proenca-Modena, William M. de Souza, Laura B. Dickson&lt;/p&gt;
+
+Oropouche virus (OROV) is an arthropod-borne virus transmitted mainly by &lt;i&gt;Culicoides paraensis&lt;/i&gt; midges in Latin America and the Caribbean, though evidence suggests occasional transmission by mosquitoes. Oropouche fever has been reported primarily in the Amazon Basin since the 1950s. In 2024, the number of Oropouche fever cases rose sharply and spread beyond the Amazon region, which has been associated with the emergence of a new reassortant OROV strain. We assessed whether increased case numbers could be explained by enhanced replication or transmission of the reassortant strain in peri-urban &lt;i&gt;Culex quinquefasciatus&lt;/i&gt; and &lt;i&gt;Aedes albopictus&lt;/i&gt;. Laboratory colonies established from Salvador, Brazil were orally exposed to the ancestral OROV strain BeAn 19991 or the contemporary strain 240023 (10⁴–10⁶ PFU/mL), and viral replication was quantified in bodies, legs, and saliva. To evaluate the influence of mosquito genotype on infection outcomes, infection rates were compared between &lt;i&gt;Ae. albopictus&lt;/i&gt; from Salvador City (Brazil) and Houston (USA). In &lt;i&gt;Cx. quinquefasciatus&lt;/i&gt;, the outbreak strain replicated less efficiently than the historical strain at low viral doses but not at high infection doses. Regardless of strain or dose, vector competence was extremely low, with only 0–1% of mosquitoes exhibiting infectious OROV particles in their saliva after extrinsic incubation. Conversely, &lt;i&gt;Ae. albopictus&lt;/i&gt; showed consistently higher body infection rates for the 240023 strain than for BeAn 19991 at both low and high doses. However, overall transmission potential remained limited: only 0–6.4% of leg or saliva samples were positive across OROV strains and doses. The higher infection rates of the 240023 strain was consistent across both &lt;i&gt;Ae. albopictus&lt;/i&gt; genotypes, but infectious saliva was detected only in mosquitoes from the Salvador line (up to 20%) and not in the Houston line (0%). Taken together, this suggests that the recent geographic expansion of OROV is unlikely to be driven by a vector shift from midges to these mosquitoes. Importantly, our findings do indicate higher infectivity of the 240023 strain in &lt;i&gt;Ae. albopictus&lt;/i&gt; across different mosquito lines which may have future implications for further adaptation to OROV.</content>
+  </entry>
+  <entry>
+    <title>Epidemiological, clinical, and diagnostic characteristics of a large-scale upsurge of dengue in the rohingya refugee camps and host communities in Cox’s Bazar, Bangladesh, 2021 to 2024: A retrospective study</title>
+    <link rel="alternate" href="https://journals.plos.org/plosntds/article?id=10.1371/journal.pntd.0014198" title="Epidemiological, clinical, and diagnostic characteristics of a large-scale upsurge of dengue in the rohingya refugee camps and host communities in Cox’s Bazar, Bangladesh, 2021 to 2024: A retrospective study" />
+    <link rel="related" type="application/pdf" href="https://journals.plos.org/plosntds/article/asset?id=10.1371/journal.pntd.0014198.PDF" title="(PDF) Epidemiological, clinical, and diagnostic characteristics of a large-scale upsurge of dengue in the rohingya refugee camps and host communities in Cox’s Bazar, Bangladesh, 2021 to 2024: A retrospective study" />
+    <link rel="related" type="text/xml" href="https://journals.plos.org/plosntds/article/asset?id=10.1371/journal.pntd.0014198.XML" title="(XML) Epidemiological, clinical, and diagnostic characteristics of a large-scale upsurge of dengue in the rohingya refugee camps and host communities in Cox’s Bazar, Bangladesh, 2021 to 2024: A retrospective study" />
+    <author>
+      <name>Charls Erik Halder</name>
+    </author>
+    <author>
+      <name>Md Abeed Hasan</name>
+    </author>
+    <author>
+      <name>Emmanuel Roba Soma</name>
+    </author>
+    <author>
+      <name>James Charles Okello</name>
+    </author>
+    <author>
+      <name>Md Mostafizur Rahman</name>
+    </author>
+    <author>
+      <name>Partha Pratim Das</name>
+    </author>
+    <author>
+      <name>U. Maung Prue</name>
+    </author>
+    <author>
+      <name>Dickson Wafula Barasa</name>
+    </author>
+    <author>
+      <name>Md Atiquzzaman</name>
+    </author>
+    <author>
+      <name>Md Sobuz Hosen</name>
+    </author>
+    <author>
+      <name>Saddam Hossain Shagar</name>
+    </author>
+    <author>
+      <name>Elizabeth Yie Chuen Chong</name>
+    </author>
+    <author>
+      <name>Debashish Paul</name>
+    </author>
+    <author>
+      <name>S. M. Niaz Mowla</name>
+    </author>
+    <author>
+      <name>Mohammadul Hoque</name>
+    </author>
+    <author>
+      <name>Abu Toha MHR Bhuiyan</name>
+    </author>
+    <author>
+      <name>Md Farhad Hussain</name>
+    </author>
+    <id>10.1371/journal.pntd.0014198</id>
+    <updated>2026-10-23T14:00:00Z</updated>
+    <published>2026-10-23T14:00:00Z</published>
+    <content type="html">&lt;p&gt;by Charls Erik Halder, Md Abeed Hasan, Emmanuel Roba Soma, James Charles Okello, Md Mostafizur Rahman, Partha Pratim Das, U. Maung Prue, Dickson Wafula Barasa, Md Atiquzzaman, Md Sobuz Hosen, Saddam Hossain Shagar, Elizabeth Yie Chuen Chong, Debashish Paul, S. M. Niaz Mowla, Mohammadul Hoque, Abu Toha MHR Bhuiyan, Md Farhad Hussain&lt;/p&gt;
+Background &lt;p&gt;Dengue emerged as a new public health threat in the Rohingya refugee camps in Cox’s Bazar, Bangladesh, in 2021 and expanded into large-scale upsurges in subsequent years. Evidence on dengue epidemiology and clinical presentation in protracted refugee settings remains limited, despite the need for stronger outbreak preparedness and case management in these contexts.&lt;/p&gt; Objectives &lt;p&gt;To describe the epidemiological, clinical, and diagnostic characteristics of the dengue upsurge among Rohingya refugees and surrounding host communities in Cox’s Bazar, Bangladesh, and to identify predictors of inpatient admission and diagnostic positivity patterns.&lt;/p&gt; Methods &lt;p&gt;This retrospective observational study used anonymized surveillance data from the International Organization for Migration (IOM) dengue patient database. Rapid diagnostic test (RDT)–confirmed dengue cases identified across 36 IOM-supported health facilities in Ukhiya and Teknaf between 1 October 2021 and 31 December 2024 were included. Demographic, epidemiological, clinical, and laboratory variables were summarized using descriptive statistics. Weekly case counts were aggregated by epidemiological week and calendar year, and epidemic growth and decay phases were modelled using phase-specific Poisson regression. Multivariable logistic regression was used to identify factors associated with inpatient admission, while separate models examined associations between delay in presentation and RDT positivity patterns, adjusting for age and sex.&lt;/p&gt; Results &lt;p&gt;A total of 35,581 RDT-confirmed dengue cases were reported, of which 90.2% occurred among Rohingya refugees. The median age was 17 years (IQR 7–30), and 46.0% of cases were among children aged 0–14 years. Annual caseload increased from 1,011 in 2021–11,752 in 2022, 10,669 in 2023 and 12,149 in 2024, with seasonal peaks during the monsoon period and progressively later peaks and longer epidemic tails over time. Poisson models showed decreasing growth rates across years (r = 0.449 in 2021 to r = 0.091 in 2024) with increasing doubling times, while decay rates remained broadly comparable (halving time ~4.4–6.0 weeks). Overall, 8.0% of cases required inpatient admission, 1.3% were referred, and four deaths were reported (case fatality &lt;0.1%). In multivariable analysis, inpatient admission was associated with older age (≥60 vs 0–14: aOR 2.48), delayed presentation (aOR 1.06 per day), refugee status (aOR 1.43), fever ≥38°C at presentation (aOR 1.13), presence of any WHO warning sign (aOR 28.87), and chronic co-morbidity (aOR 6.63). Males had lower odds of admission than females (aOR 0.87).&lt;/p&gt; Conclusion &lt;p&gt;Sustained dengue preparedness is required in Cox’s Bazar, including strengthened surveillance, community-based early referral, targeted monitoring of high-risk groups, environmental vector control, and phase-appropriate use of NS1 and IgM/IgG diagnostics to reduce missed diagnoses and prevent progression to severe disease. These findings highlight the need for a policy shift from episodic outbreak response toward sustained dengue preparedness in humanitarian settings, including strengthened surveillance systems, integrated diagnostic strategies, community-based early referral, and coordinated vector control interventions.&lt;/p&gt;</content>
+  </entry>
+</feed>

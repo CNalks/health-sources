@@ -1,0 +1,28 @@
+[Unit]
+Description=health-sources: collect public-health articles and news (write files only)
+Wants=network-online.target
+After=network-online.target
+
+[Service]
+Type=oneshot
+User=health-sources
+Group=health-sources
+WorkingDirectory=/opt/health-sources
+ExecStart=/opt/health-sources/.venv/bin/python -m health_sources --config /opt/health-sources/sources.yaml --data-dir /var/lib/health-sources run
+# 资源上限：服务器内存紧，不能影响网站和其他服务
+MemoryMax=150M
+MemorySwapMax=0
+CPUQuota=50%
+Nice=10
+IOSchedulingClass=idle
+TimeoutStartSec=15min
+# 加固：只允许写数据目录
+NoNewPrivileges=yes
+PrivateTmp=yes
+ProtectSystem=strict
+ProtectHome=yes
+ReadWritePaths=/var/lib/health-sources
+ProtectKernelTunables=yes
+ProtectKernelModules=yes
+ProtectControlGroups=yes
+RestrictSUIDSGID=yes

@@ -1,0 +1,38 @@
+{
+ "@odata.context": "http://www.who.int/api/news/$metadata#diseaseoutbreaknews(Id,LastModified,PublicationDate,DateCreated,IncludeInSitemap,SystemSourceKey,UrlName,ItemDefaultUrl,Response,FurtherInformation,Summary,PublicationDateAndTime,TitleSuffix,UseOverrideTitle,Title,Epidemiology,OverrideTitle,Advice,Assessment,Overview,DonId,Provider)",
+ "value": [
+  {
+   "Id": "f71dec3a-9f8a-4eb1-810c-baeefc888535",
+   "Title": "Ebola disease caused by Bundibugyo virus, Democratic Republic of the Congo, Kenya and Nigeria",
+   "OverrideTitle": "Ebola disease caused by Bundibugyo virus - Democratic Republic of the Congo, Kenya and Nigeria",
+   "UseOverrideTitle": true,
+   "Summary": "Since the publication of the previous Disease Outbreak News on 8 October 2026, the Bundibugyo virus disease (BVD) outbreak has expanded geographically in the Democratic Republic of the Congo, as well as in the African Region, with Kenya and Nigeria reporting imported cases. \r\nSustained, high-level transmission continues in the Democratic Republic of the Congo. As of 20 October 2026, a total of 9704 confirmed cases, including 4687 deaths (crude case fatality ratio: 48.3%), have been reported across 66 health zones in eight provinces.  The high proportion of deaths occurring in communities continues to highlight challenges in early case detection and timely access to appropriate care. Of the 482 deaths reported since the previous update, 307 occurred in communities and 175 in treatment centres.\r\nOn 6 October 2026, the Ministry of Health of Kenya reported the first laboratory-confirmed imported case of BVD in Kenya in an individual who had travelled from the Democratic Republic of the Congo to Kenya via Uganda. As of 20 October 2026, a total of nine cases of BVD including one death, has been reported in Kenya. The eight additional cases are all known contacts of the first imported case. There is currently no evidence of wider community transmission. \r\nOn 20 October 2026, Nigeria confirmed an imported case in the Federal Capital Territory Abuja in a patient who had travelled from Uganda to the country. The patient is currently in isolation and receiving medical care. Further investigations are ongoing to better understand the complete travel history and the possible source of exposure. \r\nThese developments underscore the need for sustained readiness in the region, including cross-border surveillance, points of entry monitoring, timely case detection and coordinated preparedness and response measures.\r\nWHO advises against any restriction of travel to, or trade with, affected countries. \r\n",
+   "PublicationDateAndTime": "2026-10-23T15:03:45Z",
+   "UrlName": "2026-DON622",
+   "DonId": "2026-DON622",
+   "ItemDefaultUrl": "/2026-DON622"
+  },
+  {
+   "Id": "eafb07ec-9187-4b39-b310-94b99a89571a",
+   "Title": "Middle East respiratory syndrome coronavirus - Kingdom of Saudi Arabia",
+   "OverrideTitle": "Middle East respiratory syndrome coronavirus - Kingdom of Saudi Arabia",
+   "UseOverrideTitle": true,
+   "Summary": "Between 1 January and 5 October 2026, the Kingdom of Saudi Arabia reported eight laboratory-confirmed cases of Middle East Respiratory Syndrome Coronavirus (MERS-CoV) infection, including one death. Cases were detected across six locations: Al Jouf (1), Arar (1), Hafr Al-Batin (1), Riyadh (2), Tabuk (1) and Taif (2). No epidemiological links were identified between any of the cases.\r\nAll eight cases were symptomatic, most commonly presenting with fever (6/8), dyspnea (5/8), and cough (4/8). None were health and care workers. Infection was confirmed by RT-PCR testing. MERS is a zoonotic viral respiratory disease for which dromedary camels serve as the primary animal reservoir and two cases reported direct contact with camels while six reported no known camel exposure. Seven of eight cases had underlying comorbidities, recognized risk factors for severe MERS-CoV disease. The cases appear to represent sporadic infections related to zoonotic spillover rather than a single outbreak cluster.",
+   "PublicationDateAndTime": "2026-10-15T16:00:00Z",
+   "UrlName": "middle-east-respiratory-syndrome-coronavirus---kingdom-of-saudi-arabia",
+   "DonId": "2026-DON618",
+   "ItemDefaultUrl": "/middle-east-respiratory-syndrome-coronavirus---kingdom-of-saudi-arabia"
+  },
+  {
+   "Id": "9cca163d-6ef3-4d3e-b149-2cd7acf408f6",
+   "Title": "Pneumonia of undetermined etiology - the Russian Federation",
+   "OverrideTitle": "",
+   "UseOverrideTitle": false,
+   "Summary": "On 2 October 2026, WHO became aware through media reports of the death of an employee of the Irkutsk Antiplague Research Institute (APRI) of Siberia and the Far East, the Russian Federation. According to these reports, the individual died on 2 October following hospitalization for severe pneumonia on 29 September, and pneumonic plague was suspected as the cause of death, following occupational exposure in laboratory settings. \nFollowing requests for verification from WHO, the National Focal Point for the International Health Regulations (2005) (NFP) of the Russian Federation confirmed the death and informed WHO that no case of plague had been registered recently in Irkutsk Oblast, that preventive and control measures had been implemented in accordance with national sanitary legislation, and that the laboratory testing of contacts detected no high-threat pathogens. The authorities also reported that no biosecurity incidents had occurred in the laboratory, contrary to reports in the media, and that there were no further case of severe pneumonia linked to this case. \nThe NFP informed WHO that the case and all contacts had been tested for a range of microorganisms, including high-threat pathogens. Test results were negative for the tested high-threat pathogens. All contacts had been medically followed up in healthcare facilities or at home, and all remained asymptomatic throughout. Quarantine measures were instituted in the hospital where the patient was being treated. Based on the information provided by NFP, WHO has not identified evidence of ongoing transmission associated with this event. A key uncertainty remains the absence of a confirmed diagnosis in the deceased laboratory worker. \nWHO will continue to monitor the situation and assess any potential public health implications as further information becomes available.\n",
+   "PublicationDateAndTime": "2026-10-10T15:00:00Z",
+   "UrlName": "2026-DON620",
+   "DonId": "2026-DON620",
+   "ItemDefaultUrl": "/2026-DON620"
+  }
+ ]
+}
