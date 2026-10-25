@@ -1,20 +1,19 @@
 # 公卫前沿（CloudBase）订阅方。复制到 /etc/health-sources/subscribers/cdc.toml（root 0644）。
-# 密钥另放 /etc/health-sources/subscribers/cdc.secret（root 0600，KEY=VALUE 每行一个），不进仓库：
-#   TENCENTCLOUD_SECRETID=...      # CAM 子用户 hs-push-cdc，策略只允许对 hs-ingest 调用 scf:InvokeFunction
-#   TENCENTCLOUD_SECRETKEY=...
-#   HS_INGEST_TOKEN=...            # 可选：与 hs-ingest 环境变量 HS_INGEST_TOKEN 相同（纵深防御）
-transport = "tencent-scf-invoke"
+# 密钥另放 /etc/health-sources/subscribers/cdc.secret（root 0600，KEY=VALUE），不进仓库：
+#   HS_INGEST_SECRET=...        # 与 CloudBase 云函数 hs-ingest 环境变量 HS_INGEST_SECRET 相同
+# 线上（2026-10-25 起）用 A1：HTTP 路由 /hs-ingest + HMAC-SHA256（时间戳 ±300 秒 + 一次性 nonce）。
+transport = "https-hmac"
 window_days = 400          # 与 by-source 导出相同
 batch_size = 100
 max_requests_per_run = 20
 max_body_bytes = 900000    # 订阅方单次请求体上限 1 MB
 
-[tencent-scf-invoke]
-region = "ap-shanghai"
-namespace = "cloud1-d2guax8bue7c6cbb7"
-function = "hs-ingest"
+[https-hmac]
+url = "https://cloud1-d2guax8bue7c6cbb7-1356545629.ap-shanghai.app.tcloudbase.com/hs-ingest"
 
-# A1 备选（HTTP 路由 + HMAC，密钥文件里放 HS_INGEST_SECRET=...）：
-# transport = "https-hmac"
-# [https-hmac]
-# url = "https://<env>.ap-shanghai.app.tcloudbase.com/hs-ingest"
+# A3（CAM 子用户直接 Invoke，未采用）：
+# transport = "tencent-scf-invoke"
+# [tencent-scf-invoke]
+# region = "ap-shanghai"
+# namespace = "cloud1-d2guax8bue7c6cbb7"
+# function = "hs-ingest"

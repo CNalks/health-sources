@@ -201,7 +201,7 @@ cat /var/lib/health-sources/status.json
   新 id 的 `updated_at` 同时更新）都会留标记，按 `(deleted_at, id)` 游标推送；订阅方做软删除。删过又回来的条目标记作废。
 - **对账**：每周一次（`--reconcile`）发窗口内全部 `id + content_hash`，订阅方回缺失/不同的，这里补推（不动游标）；
   订阅方把清单里没有、窗口内的条目标删除。
-- **通道**：`tencent-scf-invoke`（推荐：CAM 子用户只允许调用一个云函数，无公网路由）或 `https-hmac`（备选）。
+- **通道**：线上用 `https-hmac`（CloudBase HTTP 路由 `/hs-ingest`，HMAC-SHA256 签 `时间戳.nonce.请求体`，时间差 ≤300 秒、nonce 一次性）；`tencent-scf-invoke`（CAM 子用户直接 Invoke）保留未用。
 - **触发**：`health-sources.service` 成功后 `OnSuccess=hs-push@cdc.service`（`deploy/health-sources.service.d/push-cdc.conf`），
   另有 `hs-push@.timer` 11:45、13:00 兜底；`hs-reconcile@.timer` 周日 11:30 对账。推送进程只读 SQLite（`mode=ro`）。
 - 预演（不联网、不需要密钥）：`python -m health_sources --data-dir ./data push --subscriber cdc --dry-run`
