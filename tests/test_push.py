@@ -267,6 +267,18 @@ class TransportTests(unittest.TestCase):
                 t.call({"action": "cursor"})
             self.assertNotIn("keytest", str(cm.exception))
 
+    def test_hmac_transport_gateway_error_is_reported(self):
+        class R:
+            status_code = 413
+            def json(self):
+                return {"code": "EXCEED_MAX_PAYLOAD_SIZE", "message": "too big"}
+        class S:
+            def post(self, *a, **k):
+                return R()
+        t = P.HmacHttpsTransport("https://example.org/hs-ingest", "s3cret", session=S(), clock=lambda: 100)
+        with self.assertRaisesRegex(P.TransportError, "gateway HTTP 413: EXCEED_MAX_PAYLOAD_SIZE"):
+            t.call({"action": "cursor"})
+
     def test_hmac_transport(self):
         sess = FakeSession({"ok": True, "data": {"x": 1}})
         t = P.HmacHttpsTransport("https://example.org/hs-ingest", "s3cret", session=sess, clock=lambda: 100)
