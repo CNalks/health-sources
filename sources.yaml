@@ -73,7 +73,7 @@ sources:
     lang: en
     url: "https://www.who.int/api/news/diseaseoutbreaknews"
     item_url_prefix: "https://www.who.int/emergencies/disease-outbreak-news/item/"
-    max_items: 20
+    max_items: 40
     license: "CC BY-NC-SA 3.0 IGO"
     figures_allowed: false   # NC-SA：非商用+相同方式共享，默认不配图
     backfill:
