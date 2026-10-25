@@ -154,3 +154,29 @@ sources:
       method: ccdc_issues
       url_template: "https://weekly.chinacdc.cn/rss/{year}_{issue}.xml"
       delay_seconds: 6
+
+  - id: cdc_thn
+    name: "US CDC Travel Health Notices"
+    adapter: rss
+    kind: news
+    lang: en
+    url: "https://wwwnc.cdc.gov/travel/rss/notices.xml"
+    max_items: 40
+    doi_from_url: false
+    feed_summary: true
+    license: "Public Domain (U.S. CDC)"
+    figures_allowed: true
+    # 旅行健康通报：与 NNDSS 数值分家；只进 health-sources，不进时间序列
+
+  - id: africa_cdc
+    name: "Africa CDC News"
+    adapter: rss
+    kind: news
+    lang: en
+    url: "https://africacdc.org/news-item/feed/"
+    max_items: 30
+    doi_from_url: false
+    feed_summary: true
+    license: "© Africa CDC; reproduction for non-commercial use with attribution"
+    figures_allowed: false
+    # 综合新闻流（含疫情通报与机构新闻）；GHS 事件页侧再按疫情关键词筛选展示
