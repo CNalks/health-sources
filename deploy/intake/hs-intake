@@ -4,8 +4,12 @@
 authorized_keys (user hs-intake):
   restrict,command="/usr/local/bin/hs-intake" ssh-ed25519 AAAA... hs-intake@github-actions
 
-The client runs `ssh hs-intake@host <target> < file`. Only two targets exist; anything else is refused.
-The payload is read from stdin (size-capped), validated, then atomically replaces the destination.
+The client runs `ssh hs-intake@host <target> < file`. Only these targets exist; anything else is refused:
+  paho       stdin JSONL  -> /var/lib/health-sources/inbox/paho.jsonl            (validated, atomic, .prev kept)
+  nndss      stdin CSV    -> /var/lib/ghs-pipeline/raw/cdc_nndss_us.csv          (validated, atomic, .prev kept)
+  ghs-data   stdout       <- tar.gz of the public GHS site data (/var/www/ai4health/global/data, already public)
+  ghs-site   stdin tar.gz -> /var/lib/ghs-site/incoming/site.tgz, then `sudo -n /usr/local/sbin/ghs-site-install`
+             (root-owned, no arguments: safe-extract, validate, swap, smoke test, auto-rollback, retention)
 Nothing else on the server is reachable with this key (no shell, pty, forwarding).
 """
 import csv
@@ -58,8 +62,48 @@ def check_nndss(data: bytes) -> str:
     return f"{len(rows)} rows, latest {y}-W{w:02d}"
 
 
+GHS_DATA = "/var/www/ai4health/global/data"
+GHS_INCOMING = "/var/lib/ghs-site/incoming"
+GHS_SITE_MAX = 80_000_000
+
+
+def ghs_data():
+    import tarfile
+    def keep(ti):
+        base = os.path.basename(ti.name)
+        if ti.name == "." or not (ti.isfile() or ti.isdir()):
+            return ti if ti.name == "." else None
+        return None if ".bak" in base or base.startswith(".") else ti
+    with tarfile.open(fileobj=sys.stdout.buffer, mode="w|gz") as t:
+        t.add(GHS_DATA, arcname=".", filter=keep)
+    syslog.syslog(syslog.LOG_INFO, "hs-intake ghs-data: sent")
+
+
+def ghs_site():
+    import subprocess
+    data = sys.stdin.buffer.read(GHS_SITE_MAX + 1)
+    if len(data) > GHS_SITE_MAX:
+        fail(f"ghs-site: payload over {GHS_SITE_MAX} bytes")
+    if data[:2] != b"\x1f\x8b":
+        fail("ghs-site: not gzip")
+    fd, tmp = tempfile.mkstemp(dir=GHS_INCOMING, prefix=".site.")
+    with os.fdopen(fd, "wb") as fh:
+        fh.write(data)
+    os.chmod(tmp, 0o640)
+    os.replace(tmp, os.path.join(GHS_INCOMING, "site.tgz"))
+    syslog.syslog(syslog.LOG_INFO, f"hs-intake ghs-site: staged {len(data)} bytes")
+    r = subprocess.run(["sudo", "-n", "/usr/local/sbin/ghs-site-install"], stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
+    out = r.stdout.decode("utf-8", "replace").strip().splitlines()
+    print("\n".join(out[-8:]))
+    sys.exit(r.returncode)
+
+
 def main():
     target = (os.environ.get("SSH_ORIGINAL_COMMAND") or "").strip()
+    if target == "ghs-data":
+        return ghs_data()
+    if target == "ghs-site":
+        return ghs_site()
     if target not in TARGETS:
         fail(f"unknown target {target[:20]!r}")
     dest, cap = TARGETS[target]
