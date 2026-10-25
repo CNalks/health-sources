@@ -1,0 +1,20 @@
+# hs-intake：GitHub Actions → 服务器的受限推送
+
+安装（root，一次性）：
+
+```bash
+useradd --system --create-home --shell /bin/sh hs-intake          # 需要 shell 才能执行强制命令；登录被 restrict+command 锁死
+install -m 0755 deploy/intake/hs-intake /usr/local/bin/hs-intake
+install -d -o hs-intake -g health-sources -m 0755 /var/lib/health-sources/inbox
+setfacl -m u:hs-intake:rwx /var/lib/ghs-pipeline/raw              # 只为原子替换 cdc_nndss_us.csv
+install -d -m 700 -o hs-intake -g hs-intake ~hs-intake/.ssh
+# authorized_keys 一行（公钥来自新生成的专用密钥，私钥只放 GitHub secret HS_INTAKE_SSH_KEY）：
+#   restrict,command="/usr/local/bin/hs-intake" ssh-ed25519 AAAA... hs-intake@github-actions
+```
+
+`restrict` = no-pty、no-port/agent/X11-forwarding、no-user-rc；`command=` 让这把钥匙只能运行接收脚本。
+接收脚本只认 `paho`（→ `/var/lib/health-sources/inbox/paho.jsonl`）和 `nndss`（→ `/var/lib/ghs-pipeline/raw/cdc_nndss_us.csv`），
+校验格式、限制大小，原子替换，旧版本留作 `*.prev`。日志：`journalctl -t hs-intake`（syslog）。
+
+撤销：删 `~hs-intake/.ssh/authorized_keys` 那一行（或 `userdel -r hs-intake`），删 GitHub secrets。
+回滚某次推送：`mv <dest>.prev <dest>`。

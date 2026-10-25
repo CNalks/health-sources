@@ -1,0 +1,82 @@
+name: Fetch sources blocked from the server
+
+# paho.org (and sometimes data.cdc.gov) refuse requests from cloud-server IPs; GitHub-hosted runners get through.
+#   - PAHO epidemiological alerts: hs `paho` adapter (collect = fetch + schema validation, no database) -> server inbox;
+#     the server's daily hs run (11:00 Asia/Shanghai) reads the inbox like any other source.
+#   - US CDC NNDSS weekly CSV: NOT an hs record (time series stay out of hs); passed through to the GHS pipeline's
+#     raw cache, ahead of its Monday 12:00 run.
+# Delivery: one restricted SSH key whose server side only runs a receiver script (validate + atomic replace).
+# Host, port, key and known_hosts live in repository secrets; logs show counts only.
+on:
+  schedule:
+    - cron: "30 2 * * *"   # daily 10:30 Asia/Shanghai, before the hs run (11:00) and GHS Monday refresh (12:00)
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: fetch-blocked
+  cancel-in-progress: false
+
+jobs:
+  fetch:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - run: pip install -r requirements.txt
+
+      - name: PAHO alerts (hs paho adapter)
+        id: paho
+        continue-on-error: true
+        run: python -m health_sources collect --only paho --out out/paho.jsonl --min-records 5
+
+      - name: NNDSS weekly CSV (US residents, same query as the GHS pipeline)
+        id: nndss
+        continue-on-error: true
+        run: |
+          set -euo pipefail
+          url='https://data.cdc.gov/resource/x9gk-5huc.csv?$where=upper(location2)%20in%20(%27US%20RESIDENTS%27,%27U.S.%20RESIDENTS%27)&$limit=500000'
+          curl -sSf --retry 2 --max-time 180 -A "health-sources/0.4 (+https://github.com/CNalks/health-sources)" -o out/cdc_nndss_us.csv "$url"
+          head -1 out/cdc_nndss_us.csv | grep -q '"states","year","week","label","m1"'
+          python - <<'PY'
+          import csv
+          rows = list(csv.DictReader(open("out/cdc_nndss_us.csv", newline="")))
+          assert len(rows) > 1000, f"only {len(rows)} rows"
+          y = max(int(r["year"]) for r in rows); w = max(int(r["week"]) for r in rows if int(r["year"]) == y)
+          print(f"nndss rows={len(rows)} latest={y}-W{w:02d}")
+          PY
+
+      - name: Deliver to server
+        if: steps.paho.outcome == 'success' || steps.nndss.outcome == 'success'
+        env:
+          KEY: ${{ secrets.HS_INTAKE_SSH_KEY }}
+          HOST: ${{ secrets.HS_INTAKE_HOST }}
+          PORT: ${{ secrets.HS_INTAKE_PORT }}
+          KNOWN_HOSTS: ${{ secrets.HS_INTAKE_KNOWN_HOSTS }}
+        run: |
+          set -euo pipefail
+          install -d -m 700 ~/.ssh
+          printf '%s\n' "$KEY" > ~/.ssh/intake && chmod 600 ~/.ssh/intake
+          printf '%s\n' "$KNOWN_HOSTS" > ~/.ssh/known_hosts
+          send() {  # $1 = target name understood by the receiver, $2 = file
+            ssh -q -i ~/.ssh/intake -p "$PORT" -o BatchMode=yes -o StrictHostKeyChecking=yes -o ConnectTimeout=30 \
+                "hs-intake@$HOST" "$1" < "$2"
+          }
+          rc=0
+          if [ "${{ steps.paho.outcome }}" = success ]; then send paho out/paho.jsonl || rc=1; fi
+          if [ "${{ steps.nndss.outcome }}" = success ]; then send nndss out/cdc_nndss_us.csv || rc=1; fi
+          rm -f ~/.ssh/intake
+          exit $rc
+
+      - name: Fail the run if a source failed
+        if: steps.paho.outcome != 'success' || steps.nndss.outcome != 'success'
+        run: |
+          echo "paho=${{ steps.paho.outcome }} nndss=${{ steps.nndss.outcome }}"
+          exit 1

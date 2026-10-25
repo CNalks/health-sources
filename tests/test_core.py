@@ -151,7 +151,7 @@ class RunnerTests(unittest.TestCase):
     def test_config_loads(self):
         cfg = runner.load_config(ROOT / "sources.yaml")
         ids = [s["id"] for s in cfg["sources"]]
-        self.assertEqual(ids, ["mmwr", "eurosurveillance", "who_don", "eid", "ecdc", "plos_ntds", "cdc_weekly"])
+        self.assertEqual(ids, ["mmwr", "eurosurveillance", "who_don", "eid", "ecdc", "plos_ntds", "cdc_weekly", "cdc_thn", "africa_cdc", "paho"])
         self.assertEqual(cfg["retired_sources"], ["europepmc"])
         self.assertLessEqual(cfg["enrich"]["max_per_run"], 100)
         for s in cfg["sources"]:

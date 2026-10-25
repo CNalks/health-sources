@@ -1,4 +1,4 @@
-"""命令行：python -m health_sources run|enrich|backfill|export|push|validate"""
+"""命令行：python -m health_sources run|enrich|backfill|export|push|validate|collect"""
 from __future__ import annotations
 
 import argparse
@@ -38,6 +38,10 @@ def main(argv: list[str] | None = None) -> int:
     pu.add_argument("--reconcile", action="store_true", help="对账：发窗口内 id+content_hash 清单，补推缺失/不同的")
     pu.add_argument("--dry-run", action="store_true", help="不联网，按空游标统计会推多少（不需要密钥）")
     sub.add_parser("validate", help="校验 latest.jsonl 每条记录")
+    co = sub.add_parser("collect", help="只抓取+校验，写 JSONL 文件，不碰数据库（GitHub Actions 代抓被拦来源用）")
+    co.add_argument("--only", nargs="+", required=True, help="来源 id")
+    co.add_argument("--out", required=True, help="输出 JSONL 路径")
+    co.add_argument("--min-records", type=int, default=1, help="少于这么多条有效记录就失败（不写文件）")
     args = p.parse_args(argv)
     logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(message)s")
 
@@ -108,6 +112,34 @@ def main(argv: list[str] | None = None) -> int:
             stats["maxBodyBytes"] = max((c["bytes"] for c in transport.calls), default=0)
         print(json.dumps(stats, ensure_ascii=False, indent=2))
         return 0 if args.reconcile or stats.get("complete") else 1
+    if args.cmd == "collect":
+        import os
+        from .adapters import ADAPTERS
+        from .http import Http
+        from .util import now_iso
+        os.environ["HS_DIRECT_FETCH"] = "1"   # 收件箱型来源（paho）在这里一律直连
+        cfg = runner.load_config(args.config)
+        d = cfg.get("defaults", {})
+        http = Http(d.get("user_agent", "health-sources/0.1"), d.get("timeout", 40), d.get("retries", 2))
+        now = now_iso()
+        good, bad, seen = [], 0, set()
+        for src in cfg["sources"]:
+            if src["id"] not in args.only:
+                continue
+            for rec in ADAPTERS[src["adapter"]].fetch(src, http, now):
+                if validate(rec):
+                    bad += 1
+                elif rec["id"] not in seen:
+                    seen.add(rec["id"]); good.append(rec)
+        logging.info("collect %s: %d valid, %d invalid", ",".join(args.only), len(good), bad)
+        if len(good) < args.min_records:
+            logging.error("too few valid records (%d < %d); not writing %s", len(good), args.min_records, args.out)
+            return 1
+        out = Path(args.out)
+        runner._atomic_write_lines(out, (json.dumps(r, ensure_ascii=False, sort_keys=True) + "\n" for r in good))
+        latest = max((r["published_at"] for r in good if r["published_at"]), default=None)
+        print(json.dumps({"sources": args.only, "records": len(good), "invalid": bad, "latest": latest}))
+        return 0
     if args.cmd == "validate":
         bad = 0
         path = Path(args.data_dir) / "latest.jsonl"

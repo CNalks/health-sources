@@ -180,3 +180,18 @@ sources:
     license: "© Africa CDC; reproduction for non-commercial use with attribution"
     figures_allowed: false
     # 综合新闻流（含疫情通报与机构新闻）；GHS 事件页侧再按疫情关键词筛选展示
+
+  - id: paho
+    name: "PAHO Epidemiological Alerts and Updates"
+    adapter: paho
+    kind: news
+    lang: en
+    url: "https://www.paho.org/en/epidemiological-alerts-and-updates"
+    pages: 2               # 列表页每页约 15 条
+    max_items: 30
+    license: "© PAHO/WHO; reuse per PAHO terms (attribution required)"
+    figures_allowed: false
+    # paho.org 拦机房 IP（阿里云 403）：GitHub Actions 直连抓取后推到服务器收件箱，日常采集读收件箱。
+    # 收件箱缺失/超时 → 该来源标 stale，不造数据。见 README「被拦来源（GitHub Actions 代抓）」。
+    inbox: "/var/lib/health-sources/inbox/paho.jsonl"
+    inbox_max_age_hours: 72

@@ -1,5 +1,14 @@
 # health-sources
 
+[![Secret scan](https://github.com/CNalks/health-sources/actions/workflows/gitleaks.yml/badge.svg)](https://github.com/CNalks/health-sources/actions/workflows/gitleaks.yml)
+[![Fetch blocked sources](https://github.com/CNalks/health-sources/actions/workflows/fetch-blocked.yml/badge.svg)](https://github.com/CNalks/health-sources/actions/workflows/fetch-blocked.yml)
+![Python](https://img.shields.io/badge/python-3.10%2B-blue) ![License](https://img.shields.io/badge/code-Apache--2.0-green)
+
+> Shared collection layer for public-health **articles** and **news / official notices** (WHO DON, ECDC, MMWR,
+> Eurosurveillance, EID, PLOS NTDs, China CDC Weekly, US CDC travel notices, Africa CDC, PAHO alerts).
+> Fetch → normalise to one schema → SQLite → JSONL snapshots → incremental push to downstream products.
+> No time series, no LLMs, no mock data.
+
 公卫文章与新闻/通报的**共享采集层**。每天从固定来源抓取最新条目，规范成统一字段，
 写入 SQLite 并导出 JSONL 快照，供下游产品各取所需：
 
@@ -30,6 +39,9 @@ Europe PMC 不再作为独立来源广撒网，只在「补全」步骤里按 DO
 | `ecdc` | ECDC：CDTR / 风险评估 / 疫情更新 / 新闻 | news | 4 个 RSS 子 feed | 注明出处即可转载 | true |
 | `plos_ntds` | PLOS NTDs | article | Atom | CC BY 4.0 | true |
 | `cdc_weekly` | China CDC Weekly（当期） | article | RSS 1.0/RDF，条目自带 `<prism:doi>`；feed 无摘要，靠补全 | CC BY-NC 4.0 | false |
+| `cdc_thn` | US CDC Travel Health Notices | news | RSS | Public Domain | true |
+| `africa_cdc` | Africa CDC News | news | RSS（GHS 侧再按疫情关键词筛） | 署名、非商用 | false |
+| `paho` | PAHO Epidemiological Alerts and Updates | news | 列表页 HTML；服务器被拦，由 GitHub Actions 代抓后推入收件箱（见下） | © PAHO/WHO，署名 | false |
 
 `license`、`figures_allowed` 在 `sources.yaml` 里按来源设定。来源也可以设 `figures_allowed: per_record`，
 这时补全步骤会按 Europe PMC 给出的单篇许可重算（只有 CC0 / CC BY / CC BY-SA 为 true）；目前没有来源用这个选项。
@@ -167,7 +179,30 @@ python3 -m venv .venv && .venv/bin/pip install -r requirements.txt
 .venv/bin/python -m unittest discover -s tests -t .
 ```
 
-不用 GitHub Actions。
+## 被拦来源（GitHub Actions 代抓）
+
+paho.org 拦截云服务器出口 IP（阿里云 403），GitHub 托管 runner 可以访问。`.github/workflows/fetch-blocked.yml`
+每天 10:30（北京时间）运行，也可手动触发：
+
+1. `python -m health_sources collect --only paho --out out/paho.jsonl` —— 用本库 `paho` 适配器直连抓取并按统一字段校验，
+   不建数据库；
+2. 顺路下载 US CDC NNDSS 周报 CSV（**不进本库**：时间序列不走 hs），只转交给 GHS 管线的原始缓存；
+3. 用一把**受限 SSH 密钥**推给服务器：服务器端 `authorized_keys` 为 `restrict,command="/usr/local/bin/hs-intake"`，
+   接收脚本只认 `paho` / `nndss` 两个目标，校验格式后原子替换（见 `deploy/intake/`）。
+
+服务器上的日常采集（11:00）发现 `paho` 配了 `inbox` 且文件存在，就读收件箱而不联网；收件箱超过 72 小时未更新
+→ 该来源标 `stale`，不造数据。主机、端口、密钥、known_hosts 都在仓库 secrets 里，日志只打印条数。
+
+## 安全
+
+- 仓库公开。密钥、订阅方配置（`deploy/subscribers/*.toml`）、`.env*`、`*.key` 等由 `.gitignore` 屏蔽，只放 `*.example`。
+- 每次 push / PR 跑 gitleaks 全历史扫描（`.github/workflows/gitleaks.yml`）；本地可 `pre-commit install` 启用同样的检查。
+- 服务器地址、密钥只在服务器和 GitHub secrets 里。
+
+## 许可
+
+- 代码：Apache-2.0（见 `LICENSE`）。
+- 采集到的条目：版权归各来源，按 `sources.yaml` 里每个来源的 `license` 字段使用；本库只保存标题、日期、链接、摘要等元数据。
 
 ## 部署（阿里云北京）
 
@@ -177,7 +212,7 @@ python3 -m venv .venv && .venv/bin/pip install -r requirements.txt
 - 资源：`MemoryMax=150M`、`MemorySwapMax=0`、`CPUQuota=50%`、`Nice=10`、IO idle；`ProtectSystem=strict`，只允许写数据目录
 - 安装：代码放到 `/opt/health-sources` 后以 root 运行 `deploy/install.sh`
 - 下游只读访问（2026-10-25 起，为公卫前沿火山云采集准备，尚未接入定时任务）：系统账号 `hs-reader`，
-  `authorized_keys` 为 `restrict,from="101.47.156.198",command="/usr/local/bin/hs-export-read"`，
+  `authorized_keys` 为 `restrict,from="<downstream-ip>",command="/usr/local/bin/hs-export-read"`，
   强制命令只输出 `status.json` + `by-source/*.jsonl` 的 tar（源码在 CNalks/CDC-Weekly-Digest `ops/aliyun/hs-export-read`）。
   撤销：`userdel -r hs-reader && rm /usr/local/bin/hs-export-read`
 
