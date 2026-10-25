@@ -19,6 +19,7 @@ import hmac
 import json
 import logging
 import os
+import secrets
 import time
 from dataclasses import dataclass, field
 from datetime import datetime, timedelta, timezone
@@ -152,12 +153,14 @@ class ScfInvokeTransport:
 
 
 class HmacHttpsTransport:
-    """A1 备选：HTTP 路由 + HMAC-SHA256（X-HS-Timestamp + 请求体）。"""
+    """A1：HTTP 路由 + HMAC-SHA256。签名串 = "<unix 秒>.<nonce 32 位十六进制>.<原始请求体>"，
+    头 X-HS-Timestamp / X-HS-Nonce / X-HS-Signature。订阅方要求时间差 ≤300 秒、nonce 不可重用。"""
 
-    def __init__(self, url: str, secret: str, session=None, clock=time.time):
+    def __init__(self, url: str, secret: str, session=None, clock=time.time, nonce=None):
         if not url.startswith("https://") or not secret:
             raise TransportError("https-hmac needs an https url and a secret")
         self.url, self._secret, self.clock = url, secret.encode("utf-8"), clock
+        self.nonce = nonce or (lambda: secrets.token_hex(16))
         if session is None:
             import requests
             session = requests.Session()
@@ -166,10 +169,15 @@ class HmacHttpsTransport:
     def call(self, body: dict) -> dict:
         raw = json.dumps(body, ensure_ascii=False).encode("utf-8")
         ts = str(int(self.clock()))
-        sig = hmac.new(self._secret, ts.encode() + b"." + raw, hashlib.sha256).hexdigest()
+        nonce = self.nonce()
+        sig = hmac.new(self._secret, ts.encode() + b"." + nonce.encode() + b"." + raw, hashlib.sha256).hexdigest()
         resp = self.session.post(self.url, data=raw, timeout=60, headers={
-            "Content-Type": "application/json", "X-HS-Timestamp": ts, "X-HS-Signature": sig})
-        return _check(resp.json())
+            "Content-Type": "application/json", "X-HS-Timestamp": ts, "X-HS-Nonce": nonce, "X-HS-Signature": sig})
+        try:
+            data = resp.json()
+        except ValueError:
+            raise TransportError(f"subscriber returned non-JSON (HTTP {getattr(resp, 'status_code', '?')})") from None
+        return _check(data)
 
 
 def _check(res) -> dict:

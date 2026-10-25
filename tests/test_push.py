@@ -271,10 +271,16 @@ class TransportTests(unittest.TestCase):
         sess = FakeSession({"ok": True, "data": {"x": 1}})
         t = P.HmacHttpsTransport("https://example.org/hs-ingest", "s3cret", session=sess, clock=lambda: 100)
         self.assertEqual(t.call({"action": "cursor"}), {"x": 1})
+        t.call({"action": "cursor"})
         import hashlib, hmac
         sent = sess.sent[0]
-        want = hmac.new(b"s3cret", b"100." + sent["data"], hashlib.sha256).hexdigest()
+        nonce = sent["headers"]["X-HS-Nonce"]
+        self.assertRegex(nonce, r"^[0-9a-f]{32}$")
+        self.assertNotEqual(nonce, sess.sent[1]["headers"]["X-HS-Nonce"])
+        want = hmac.new(b"s3cret", b"100." + nonce.encode() + b"." + sent["data"], hashlib.sha256).hexdigest()
         self.assertEqual(sent["headers"]["X-HS-Signature"], want)
+        self.assertEqual(sent["headers"]["X-HS-Timestamp"], "100")
+        self.assertNotIn("s3cret", json.dumps(sent["headers"]))
 
     def test_load_subscriber_prefers_systemd_credentials(self):
         import os
