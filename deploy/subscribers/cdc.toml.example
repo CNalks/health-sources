@@ -5,8 +5,8 @@
 transport = "https-hmac"
 window_days = 400          # 与 by-source 导出相同
 batch_size = 100
-max_requests_per_run = 20
-max_body_bytes = 900000    # 订阅方单次请求体上限 1 MB
+max_requests_per_run = 40  # 首次全量约 15 次请求
+max_body_bytes = 90000     # CloudBase HTTP 访问服务：文本类请求体上限 100KB（EXCEED_MAX_PAYLOAD_SIZE）
 
 [https-hmac]
 url = "https://cloud1-d2guax8bue7c6cbb7-1356545629.ap-shanghai.app.tcloudbase.com/hs-ingest"

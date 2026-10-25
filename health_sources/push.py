@@ -173,10 +173,14 @@ class HmacHttpsTransport:
         sig = hmac.new(self._secret, ts.encode() + b"." + nonce.encode() + b"." + raw, hashlib.sha256).hexdigest()
         resp = self.session.post(self.url, data=raw, timeout=60, headers={
             "Content-Type": "application/json", "X-HS-Timestamp": ts, "X-HS-Nonce": nonce, "X-HS-Signature": sig})
+        status = getattr(resp, "status_code", 200)
         try:
             data = resp.json()
         except ValueError:
-            raise TransportError(f"subscriber returned non-JSON (HTTP {getattr(resp, 'status_code', '?')})") from None
+            raise TransportError(f"subscriber returned non-JSON (HTTP {status})") from None
+        if isinstance(data, dict) and "ok" not in data and data.get("code"):
+            # 网关自身的错误（如 EXCEED_MAX_PAYLOAD_SIZE），不是 hs-ingest 的返回
+            raise TransportError(f"gateway HTTP {status}: {str(data.get('code'))[:80]}")
         return _check(data)
 
 
