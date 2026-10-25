@@ -1,0 +1,10 @@
+[Unit]
+Description=health-sources weekly reconcile with %i (Sunday 11:30 Beijing time)
+
+[Timer]
+OnCalendar=Sun *-*-* 11:30:00 Asia/Shanghai
+Persistent=true
+Unit=hs-reconcile@%i.service
+
+[Install]
+WantedBy=timers.target

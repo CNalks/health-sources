@@ -188,6 +188,26 @@ journalctl -u health-sources.service -n 50     # 日志（含峰值内存）
 cat /var/lib/health-sources/status.json
 ```
 
+## 下游推送（push，v0.4）
+
+单向、增量、异步：本库只往外推，订阅方只收不回写。通用模块 `health_sources/push.py`，订阅方配置
+`/etc/health-sources/subscribers/<name>.toml`（样例 `deploy/subscribers/cdc.toml.example`），密钥文件 `<name>.secret`
+（root 0600，systemd `LoadCredential` 交给进程，不进仓库、不进环境变量、不打印）。
+
+- **增量**：按 `records.updated_at + id` 复合游标，只推内容有变化的记录；`fetched_at`、`status` 不推（每天都变）。
+  每条带 `hs_updated_at`、`sort_key`（= 导出排序键 `COALESCE(published_at, first_seen_at)`）、`content_hash`（规范化内容 sha256）。
+- **游标存在订阅方**：每次先问订阅方确认到哪（`cursor`），每批确认后才推进；失败就停，下次从订阅方游标续传。
+- **删除**：`tombstones` 表。停用来源（`purge_source`，reason=retired）、URL id 合并到 DOI id（merged）、换 id（rekeyed，
+  新 id 的 `updated_at` 同时更新）都会留标记，按 `(deleted_at, id)` 游标推送；订阅方做软删除。删过又回来的条目标记作废。
+- **对账**：每周一次（`--reconcile`）发窗口内全部 `id + content_hash`，订阅方回缺失/不同的，这里补推（不动游标）；
+  订阅方把清单里没有、窗口内的条目标删除。
+- **通道**：`tencent-scf-invoke`（推荐：CAM 子用户只允许调用一个云函数，无公网路由）或 `https-hmac`（备选）。
+- **触发**：`health-sources.service` 成功后 `OnSuccess=hs-push@cdc.service`（`deploy/health-sources.service.d/push-cdc.conf`），
+  另有 `hs-push@.timer` 11:45、13:00 兜底；`hs-reconcile@.timer` 周日 11:30 对账。推送进程只读 SQLite（`mode=ro`）。
+- 预演（不联网、不需要密钥）：`python -m health_sources --data-dir ./data push --subscriber cdc --dry-run`
+
+以上单元**不随代码自动安装**；安装前 `health-sources.service` 完全不变。
+
 ## 新增来源
 
 1. 在 `sources.yaml` 加一项（`id`、`adapter`、`kind`、`url`、`license`、`figures_allowed`）。

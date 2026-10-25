@@ -1,0 +1,29 @@
+[Unit]
+Description=health-sources: one-way incremental push to subscriber %i
+Wants=network-online.target
+After=network-online.target health-sources.service
+# 本单元只读 SQLite（mode=ro），游标存在订阅方；失败不影响 health-sources 本身
+
+[Service]
+Type=oneshot
+User=health-sources
+Group=health-sources
+WorkingDirectory=/opt/health-sources
+# 密钥文件 root 0600，由 systemd 交给服务进程（$CREDENTIALS_DIRECTORY/%i.secret），不进仓库、不进环境变量
+LoadCredential=%i.secret:/etc/health-sources/subscribers/%i.secret
+ExecStart=/opt/health-sources/.venv/bin/python -m health_sources --data-dir /var/lib/health-sources push --subscriber %i --config-dir /etc/health-sources/subscribers
+MemoryMax=100M
+MemorySwapMax=0
+CPUQuota=30%
+Nice=10
+IOSchedulingClass=idle
+TimeoutStartSec=10min
+NoNewPrivileges=yes
+PrivateTmp=yes
+ProtectSystem=strict
+ProtectHome=yes
+ReadOnlyPaths=/var/lib/health-sources /etc/health-sources
+ProtectKernelTunables=yes
+ProtectKernelModules=yes
+ProtectControlGroups=yes
+RestrictSUIDSGID=yes

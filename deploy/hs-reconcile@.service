@@ -1,0 +1,27 @@
+[Unit]
+Description=health-sources: weekly reconcile with subscriber %i (id + content_hash manifest)
+Wants=network-online.target
+After=network-online.target
+
+[Service]
+Type=oneshot
+User=health-sources
+Group=health-sources
+WorkingDirectory=/opt/health-sources
+LoadCredential=%i.secret:/etc/health-sources/subscribers/%i.secret
+ExecStart=/opt/health-sources/.venv/bin/python -m health_sources --data-dir /var/lib/health-sources push --subscriber %i --config-dir /etc/health-sources/subscribers --reconcile
+MemoryMax=100M
+MemorySwapMax=0
+CPUQuota=30%
+Nice=10
+IOSchedulingClass=idle
+TimeoutStartSec=10min
+NoNewPrivileges=yes
+PrivateTmp=yes
+ProtectSystem=strict
+ProtectHome=yes
+ReadOnlyPaths=/var/lib/health-sources /etc/health-sources
+ProtectKernelTunables=yes
+ProtectKernelModules=yes
+ProtectControlGroups=yes
+RestrictSUIDSGID=yes

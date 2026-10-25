@@ -1,4 +1,4 @@
-"""命令行：python -m health_sources run|enrich|backfill|export|validate"""
+"""命令行：python -m health_sources run|enrich|backfill|export|push|validate"""
 from __future__ import annotations
 
 import argparse
@@ -32,6 +32,11 @@ def main(argv: list[str] | None = None) -> int:
     b.add_argument("--year", type=int, help="cdc_weekly：年份")
     b.add_argument("--issues", help="cdc_weekly：期号范围，如 28-43")
     sub.add_parser("export", help="只从 SQLite 重新导出快照")
+    pu = sub.add_parser("push", help="向下游订阅方增量推送（只读本库；游标存在订阅方）")
+    pu.add_argument("--subscriber", required=True, help="订阅方名，对应 <config-dir>/<name>.toml")
+    pu.add_argument("--config-dir", default="/etc/health-sources/subscribers")
+    pu.add_argument("--reconcile", action="store_true", help="对账：发窗口内 id+content_hash 清单，补推缺失/不同的")
+    pu.add_argument("--dry-run", action="store_true", help="不联网，按空游标统计会推多少（不需要密钥）")
     sub.add_parser("validate", help="校验 latest.jsonl 每条记录")
     args = p.parse_args(argv)
     logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(message)s")
@@ -76,6 +81,33 @@ def main(argv: list[str] | None = None) -> int:
             store.close()
         print(json.dumps(st["sources"], ensure_ascii=False, indent=2))
         return 0
+    if args.cmd == "push":
+        from . import push as push_mod
+        store = Store(Path(args.data_dir) / "health_sources.sqlite", readonly=True)
+        try:
+            if args.dry_run:
+                sub = push_mod.Subscriber(name=args.subscriber, transport="dry-run")
+                try:
+                    loaded = push_mod.load_subscriber(args.subscriber, args.config_dir)
+                    sub.window_days, sub.batch_size = loaded.window_days, loaded.batch_size
+                    sub.max_requests_per_run, sub.max_body_bytes = 10_000, loaded.max_body_bytes
+                except FileNotFoundError:
+                    sub.max_requests_per_run = 10_000
+                transport = push_mod.DryRunTransport()
+            else:
+                sub = push_mod.load_subscriber(args.subscriber, args.config_dir)
+                transport = push_mod.make_transport(sub)
+            if args.reconcile:
+                stats = push_mod.reconcile(store, transport, sub)
+            else:
+                stats = push_mod.push(store, transport, sub, push_mod.read_export_generated_at(Path(args.data_dir)))
+        finally:
+            store.close()
+        if args.dry_run:
+            stats["calls"] = len(transport.calls)
+            stats["maxBodyBytes"] = max((c["bytes"] for c in transport.calls), default=0)
+        print(json.dumps(stats, ensure_ascii=False, indent=2))
+        return 0 if args.reconcile or stats.get("complete") else 1
     if args.cmd == "validate":
         bad = 0
         path = Path(args.data_dir) / "latest.jsonl"

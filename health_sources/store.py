@@ -58,6 +58,15 @@ CREATE TABLE IF NOT EXISTS enrich_attempts (
     last_result TEXT NOT NULL,       -- filled / partial / found_nothing_new / not_found / error
     last_error TEXT
 );
+-- 删除标记：记录从 records 删掉时留一条，供下游订阅方（push）同步删除；按 (deleted_at, id) 增量读
+CREATE TABLE IF NOT EXISTS tombstones (
+    id TEXT PRIMARY KEY,
+    source TEXT NOT NULL,
+    deleted_at TEXT NOT NULL,
+    reason TEXT NOT NULL             -- retired / merged / rekeyed
+);
+CREATE INDEX IF NOT EXISTS idx_tombstones_cursor ON tombstones(deleted_at, id);
+CREATE INDEX IF NOT EXISTS idx_records_updated ON records(updated_at, id);
 """
 
 # 旧库（v0.1）缺的列：启动时补上
@@ -80,8 +89,13 @@ CONTENT_FIELDS = [f for f in FIELDS if f not in ("id", "fetched_at", "status")]
 
 
 class Store:
-    def __init__(self, path: str | Path):
+    def __init__(self, path: str | Path, readonly: bool = False):
         self.path = Path(path)
+        self.readonly = readonly
+        if readonly:   # 下游推送只读：不建表、不迁移，库不存在就报错
+            self.conn = sqlite3.connect(f"file:{self.path}?mode=ro", uri=True)
+            self.conn.row_factory = sqlite3.Row
+            return
         self.path.parent.mkdir(parents=True, exist_ok=True)
         self.conn = sqlite3.connect(str(self.path))
         self.conn.row_factory = sqlite3.Row
@@ -128,6 +142,8 @@ class Store:
                     self.conn.execute(
                         f"INSERT INTO records ({','.join(cols)}) VALUES ({','.join('?' * len(cols))})", vals
                     )
+                    # 删过又回来的条目：删除标记作废（新记录 updated_at 更新，下游按新记录覆盖）
+                    self.conn.execute("DELETE FROM tombstones WHERE id = ?", (rec["id"],))
                     continue
                 # 已有的非空字段不被空值覆盖（例如某次 feed 少了摘要）；
                 # enrich 写入过的字段也不被 feed 的值覆盖（例如标题提取的关键词顶掉原文关键词）
@@ -170,24 +186,36 @@ class Store:
             )
             return cur.rowcount
 
-    def purge_source(self, source: str) -> int:
-        """删除已停用来源的全部记录和运行状态；返回删除条数。"""
+    def _tombstone(self, rec_id: str, source: str, now: str, reason: str) -> None:
+        self.conn.execute(
+            """INSERT INTO tombstones(id, source, deleted_at, reason) VALUES (?, ?, ?, ?)
+               ON CONFLICT(id) DO UPDATE SET source=excluded.source, deleted_at=excluded.deleted_at, reason=excluded.reason""",
+            (rec_id, source, now, reason),
+        )
+
+    def purge_source(self, source: str, now: str | None = None) -> int:
+        """删除已停用来源的全部记录和运行状态；返回删除条数。被删的每条留删除标记（reason=retired）。"""
+        from .util import now_iso
+        now = now or now_iso()
         with self.conn:
+            for row in self.conn.execute("SELECT id FROM records WHERE source = ?", (source,)).fetchall():
+                self._tombstone(row["id"], source, now, "retired")
             cur = self.conn.execute("DELETE FROM records WHERE source = ?", (source,))
             self.conn.execute("DELETE FROM source_runs WHERE source = ?", (source,))
             self.conn.execute("DELETE FROM enrich_attempts WHERE id NOT IN (SELECT id FROM records)")
             return cur.rowcount
 
-    def backfill_dois(self, sources: list[str], derive) -> dict:
+    def backfill_dois(self, sources: list[str], derive, now: str | None = None) -> dict:
         """给没有 DOI、但现在能从 URL 推出 DOI 的旧记录补上 DOI，并把 id 换成按 DOI 计算的 id。
         若按 DOI 的新记录已存在（feed 已重新抓到），删掉旧的那条。返回 {'rekeyed': n, 'merged': n}。"""
-        from .util import make_id
+        from .util import make_id, now_iso
+        now = now or now_iso()
         out = {"rekeyed": 0, "merged": 0}
         if not sources:
             return out
         marks = ",".join("?" * len(sources))
         rows = self.conn.execute(
-            f"SELECT id, url FROM records WHERE doi IS NULL AND kind = 'article' AND source IN ({marks})", sources
+            f"SELECT id, url, source FROM records WHERE doi IS NULL AND kind = 'article' AND source IN ({marks})", sources
         ).fetchall()
         with self.conn:
             for row in rows:
@@ -197,9 +225,14 @@ class Store:
                 new_id = make_id(doi, row["url"])
                 if self.conn.execute("SELECT 1 FROM records WHERE id = ?", (new_id,)).fetchone():
                     self.conn.execute("DELETE FROM records WHERE id = ?", (row["id"],))
+                    self._tombstone(row["id"], row["source"], now, "merged")
                     out["merged"] += 1
                 else:
-                    self.conn.execute("UPDATE records SET id = ?, doi = ? WHERE id = ?", (new_id, doi, row["id"]))
+                    # 换 id 等于「旧 id 删除 + 新 id 出现」：旧 id 留删除标记，新 id 的 updated_at 更新，下游才会收到
+                    self.conn.execute("UPDATE records SET id = ?, doi = ?, updated_at = ? WHERE id = ?",
+                                      (new_id, doi, now, row["id"]))
+                    self.conn.execute("DELETE FROM tombstones WHERE id = ?", (new_id,))
+                    self._tombstone(row["id"], row["source"], now, "rekeyed")
                     out["rekeyed"] += 1
                 self.conn.execute("DELETE FROM enrich_attempts WHERE id = ?", (row["id"],))
         return out
@@ -281,6 +314,50 @@ class Store:
         sql += " ORDER BY COALESCE(published_at, first_seen_at) DESC, source, id"
         for r in self.conn.execute(sql, args):
             yield self._from_row(r)
+
+    # ---- 下游推送（push.py）：按 (updated_at, id) / (deleted_at, id) 复合游标增量读 ----
+
+    def changed_since(self, cursor: dict | None, since: str, limit: int) -> list[dict]:
+        """updated_at+id 严格大于游标、且在窗口内（COALESCE(published_at, first_seen_at) >= since）的记录，按游标顺序。
+        每条另带 hs_updated_at（游标用）和 sort_key（= 导出排序键）。"""
+        sql = "SELECT * FROM records WHERE COALESCE(published_at, first_seen_at) >= ?"
+        args: list = [since]
+        if cursor:
+            sql += " AND (updated_at > ? OR (updated_at = ? AND id > ?))"
+            args += [cursor["updatedAt"], cursor["updatedAt"], cursor["id"]]
+        sql += " ORDER BY updated_at, id LIMIT ?"
+        args.append(limit)
+        out = []
+        for r in self.conn.execute(sql, args):
+            rec = self._from_row(r)
+            rec["hs_updated_at"] = r["updated_at"]
+            rec["sort_key"] = r["published_at"] or r["first_seen_at"]
+            out.append(rec)
+        return out
+
+    def tombstones_since(self, cursor: dict | None, limit: int) -> list[dict]:
+        if not self._has_table("tombstones"):
+            return []
+        sql, args = "SELECT * FROM tombstones", []
+        if cursor:
+            sql += " WHERE deleted_at > ? OR (deleted_at = ? AND id > ?)"
+            args += [cursor["deletedAt"], cursor["deletedAt"], cursor["id"]]
+        sql += " ORDER BY deleted_at, id LIMIT ?"
+        args.append(limit)
+        return [dict(r) for r in self.conn.execute(sql, args)]
+
+    def window_records(self, since: str):
+        """对账用：窗口内全部记录（游标迭代）。"""
+        for r in self.conn.execute(
+            "SELECT * FROM records WHERE COALESCE(published_at, first_seen_at) >= ? ORDER BY id", (since,)
+        ):
+            rec = self._from_row(r)
+            rec["hs_updated_at"] = r["updated_at"]
+            rec["sort_key"] = r["published_at"] or r["first_seen_at"]
+            yield rec
+
+    def _has_table(self, name: str) -> bool:
+        return self.conn.execute("SELECT 1 FROM sqlite_master WHERE type='table' AND name=?", (name,)).fetchone() is not None
 
     def sources_present(self) -> list[str]:
         return [r[0] for r in self.conn.execute("SELECT DISTINCT source FROM records ORDER BY source")]

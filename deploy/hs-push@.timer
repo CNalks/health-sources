@@ -1,0 +1,11 @@
+[Unit]
+Description=health-sources push to %i: fallback runs 11:45 and 13:00 Beijing time (main run is OnSuccess of health-sources)
+
+[Timer]
+OnCalendar=*-*-* 11:45:00 Asia/Shanghai
+OnCalendar=*-*-* 13:00:00 Asia/Shanghai
+Persistent=true
+Unit=hs-push@%i.service
+
+[Install]
+WantedBy=timers.target
