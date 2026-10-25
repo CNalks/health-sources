@@ -43,23 +43,23 @@ def load_config(path: str | Path) -> dict:
     return cfg
 
 
-def purge_retired(cfg: dict, store: Store) -> dict[str, int]:
+def purge_retired(cfg: dict, store: Store, now: str | None = None) -> dict[str, int]:
     """已停用来源（sources.yaml 的 retired_sources）：删除库里的记录，不再导出。"""
     out = {}
     for sid in cfg.get("retired_sources") or []:
-        n = store.purge_source(sid)
+        n = store.purge_source(sid, now)
         if n:
             log.info("retired source %s: deleted %d records", sid, n)
         out[sid] = n
     return out
 
 
-def backfill_dois(cfg: dict, store: Store) -> dict:
+def backfill_dois(cfg: dict, store: Store, now: str | None = None) -> dict:
     """旧记录（如 v0.1 时 MMWR 提前发布 / 增刊没推出 DOI）补 DOI，避免同一篇按 URL、按 DOI 各算一条。"""
     from .util import doi_from_url
     ids = [s["id"] for s in cfg["sources"] if s["kind"] == "article" and s.get("doi_from_url", True)
            and s.get("id_from") != "url"]
-    out = store.backfill_dois(ids, doi_from_url)
+    out = store.backfill_dois(ids, doi_from_url, now)
     if out["rekeyed"] or out["merged"]:
         log.info("backfilled DOIs from URL: %s", out)
     return out
@@ -201,8 +201,8 @@ def run(config_path: str | Path, data_dir: str | Path, only: list[str] | None = 
     now = now_iso()
     results = []
     try:
-        retired = purge_retired(cfg, store)
-        backfill_dois(cfg, store)
+        retired = purge_retired(cfg, store, now)
+        backfill_dois(cfg, store, now)
         for src in cfg["sources"]:
             if only and src["id"] not in only:
                 continue
