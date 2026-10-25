@@ -4,3 +4,18 @@ __pycache__/
 data/
 *.sqlite
 *.db
+
+# secrets never go into this public repository
+.env
+.env.*
+*.env
+*.key
+*.pem
+*.p12
+*.secret
+id_rsa*
+id_ed25519*
+secrets/
+deploy/subscribers/*.toml
+!deploy/subscribers/*.toml.example
+out/

@@ -9,11 +9,11 @@ max_requests_per_run = 40  # 首次全量约 15 次请求
 max_body_bytes = 90000     # CloudBase HTTP 访问服务：文本类请求体上限 100KB（EXCEED_MAX_PAYLOAD_SIZE）
 
 [https-hmac]
-url = "https://cloud1-d2guax8bue7c6cbb7-1356545629.ap-shanghai.app.tcloudbase.com/hs-ingest"
+url = "https://<env-id>.ap-shanghai.app.tcloudbase.com/hs-ingest"
 
 # A3（CAM 子用户直接 Invoke，未采用）：
 # transport = "tencent-scf-invoke"
 # [tencent-scf-invoke]
 # region = "ap-shanghai"
-# namespace = "cloud1-d2guax8bue7c6cbb7"
+# namespace = "<env-id>"
 # function = "hs-ingest"

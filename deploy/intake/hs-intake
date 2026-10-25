@@ -1,0 +1,92 @@
+#!/usr/bin/python3
+"""Forced command for the restricted SSH key used by .github/workflows/fetch-blocked.yml.
+
+authorized_keys (user hs-intake):
+  restrict,command="/usr/local/bin/hs-intake" ssh-ed25519 AAAA... hs-intake@github-actions
+
+The client runs `ssh hs-intake@host <target> < file`. Only two targets exist; anything else is refused.
+The payload is read from stdin (size-capped), validated, then atomically replaces the destination.
+Nothing else on the server is reachable with this key (no shell, pty, forwarding).
+"""
+import csv
+import io
+import json
+import os
+import shutil
+import sys
+import tempfile
+import syslog
+
+TARGETS = {
+    # name: (destination, max bytes)
+    "paho": ("/var/lib/health-sources/inbox/paho.jsonl", 2_000_000),
+    "nndss": ("/var/lib/ghs-pipeline/raw/cdc_nndss_us.csv", 40_000_000),
+}
+PAHO_FIELDS = {"id", "source", "kind", "title", "url", "published_at", "fetched_at", "status"}
+
+
+def fail(msg):
+    syslog.syslog(syslog.LOG_WARNING, f"hs-intake refused: {msg}")
+    print(f"refused: {msg}", file=sys.stderr)
+    sys.exit(1)
+
+
+def check_paho(data: bytes) -> str:
+    lines = [l for l in data.decode("utf-8").splitlines() if l.strip()]
+    if not 1 <= len(lines) <= 200:
+        fail(f"paho: {len(lines)} records")
+    for l in lines:
+        r = json.loads(l)
+        if not PAHO_FIELDS <= set(r):
+            fail("paho: missing fields")
+        if r["source"] != "paho" or r["kind"] != "news":
+            fail("paho: wrong source/kind")
+        if not str(r["url"]).startswith("https://www.paho.org/"):
+            fail("paho: foreign url")
+    return f"{len(lines)} records"
+
+
+def check_nndss(data: bytes) -> str:
+    text = data.decode("utf-8")
+    if not text.startswith('"states","year","week","label","m1"'):
+        fail("nndss: unexpected header")
+    rows = list(csv.DictReader(io.StringIO(text)))
+    if len(rows) < 1000:
+        fail(f"nndss: only {len(rows)} rows")
+    y = max(int(r["year"]) for r in rows)
+    w = max(int(r["week"]) for r in rows if int(r["year"]) == y)
+    return f"{len(rows)} rows, latest {y}-W{w:02d}"
+
+
+def main():
+    target = (os.environ.get("SSH_ORIGINAL_COMMAND") or "").strip()
+    if target not in TARGETS:
+        fail(f"unknown target {target[:20]!r}")
+    dest, cap = TARGETS[target]
+    data = sys.stdin.buffer.read(cap + 1)
+    if len(data) > cap:
+        fail(f"{target}: payload over {cap} bytes")
+    summary = (check_paho if target == "paho" else check_nndss)(data)
+    d = os.path.dirname(dest)
+    fd, tmp = tempfile.mkstemp(dir=d, prefix=f".{os.path.basename(dest)}.")
+    try:
+        with os.fdopen(fd, "wb") as fh:
+            fh.write(data)
+        os.chmod(tmp, 0o644)
+        if os.path.exists(dest):   # keep the previous version as <dest>.prev (copy; dest never disappears)
+            fd2, tmp2 = tempfile.mkstemp(dir=d, prefix=".prev.")
+            with os.fdopen(fd2, "wb") as out, open(dest, "rb") as src:
+                shutil.copyfileobj(src, out)
+            os.chmod(tmp2, 0o644)
+            os.replace(tmp2, dest + ".prev")
+        os.replace(tmp, dest)
+    except BaseException:
+        if os.path.exists(tmp):
+            os.unlink(tmp)
+        raise
+    syslog.syslog(syslog.LOG_INFO, f"hs-intake {target}: {summary}")
+    print(f"ok {target}: {summary}")
+
+
+if __name__ == "__main__":
+    main()
