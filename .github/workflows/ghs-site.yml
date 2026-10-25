@@ -1,0 +1,150 @@
+name: GHS site build & deploy + freshness monitor
+
+# Global Health Signals (cnalks.cn/ai4health/global) is a static Astro site. Its data is refreshed on the server
+# (Aliyun timers); pages that embed data at build time need a rebuild, and the server is too small to build
+# (1.6 GB RAM). This job builds it on a GitHub-hosted runner and installs it through the same restricted key
+# as fetch-blocked.yml.
+#
+# Private code safety (this repository is public, the GHS repository is private):
+#   - GHS is checked out with a read-only deploy key that only opens that one repository;
+#   - triggers are schedule / manual only (no pull_request), so forks never get the secrets;
+#   - build output is withheld from the public log (only counts are printed); no artifacts, no caches;
+#   - what leaves the runner is the built site, which is public anyway.
+# A failed run (build, install, or a stale/error source in freshness.json) e-mails the repository owner.
+on:
+  schedule:
+    - cron: "40 5 * * *"   # daily 13:40 Asia/Shanghai: after hs 11:00, events 11:30, pipeline Mon/Thu 12:00
+  workflow_dispatch:
+    inputs:
+      force:
+        description: "Rebuild even if code and data are unchanged"
+        type: boolean
+        default: false
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ghs-site
+  cancel-in-progress: false
+
+env:
+  SITE: https://www.cnalks.cn/ai4health/global
+
+jobs:
+  site:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    steps:
+      - name: Checkout GHS (private, read-only deploy key)
+        uses: actions/checkout@v4
+        with:
+          repository: CNalks/ai4health-global
+          ssh-key: ${{ secrets.GHS_DEPLOY_KEY }}
+          persist-credentials: false
+          path: ghs
+
+      - name: SSH setup
+        env:
+          KEY: ${{ secrets.HS_INTAKE_SSH_KEY }}
+          KNOWN_HOSTS: ${{ secrets.HS_INTAKE_KNOWN_HOSTS }}
+        run: |
+          install -d -m 700 ~/.ssh
+          printf '%s\n' "$KEY" > ~/.ssh/intake && chmod 600 ~/.ssh/intake
+          printf '%s\n' "$KNOWN_HOSTS" > ~/.ssh/known_hosts
+
+      - name: Pull the live data snapshot
+        env:
+          HOST: ${{ secrets.HS_INTAKE_HOST }}
+          PORT: ${{ secrets.HS_INTAKE_PORT }}
+        run: |
+          set -euo pipefail
+          ssh -q -i ~/.ssh/intake -p "$PORT" -o BatchMode=yes -o StrictHostKeyChecking=yes -o ConnectTimeout=30 \
+              "hs-intake@$HOST" ghs-data > data.tgz
+          rm -rf ghs/public/data && mkdir -p ghs/public/data && tar -xzf data.tgz -C ghs/public/data
+          python3 ghs/pipeline/site_schema.py ghs/public/data
+
+      - name: Decide whether a rebuild is needed
+        id: plan
+        run: |
+          set -euo pipefail
+          commit=$(git -C ghs rev-parse HEAD)
+          data=$(cd ghs/public/data && find . -type f ! -name freshness.json -print0 | sort -z | xargs -0 sha256sum | sha256sum | cut -c1-16)
+          live=$(curl -sf --max-time 60 "$SITE/build.json" || echo '{}')
+          same=$(python3 -c "import json,sys;b=json.loads(sys.argv[1]);print(int(b.get('commit')==sys.argv[2] and b.get('data')==sys.argv[3]))" "$live" "$commit" "$data")
+          echo "commit=$commit" >> "$GITHUB_OUTPUT"; echo "data=$data" >> "$GITHUB_OUTPUT"
+          if [ "$same" = 1 ] && [ "${{ inputs.force }}" != "true" ]; then echo "build=no" >> "$GITHUB_OUTPUT"; echo "site already current (commit ${commit:0:7}, data $data)";
+          else echo "build=yes" >> "$GITHUB_OUTPUT"; echo "rebuild: commit ${commit:0:7}, data $data"; fi
+
+      - uses: actions/setup-node@v4
+        if: steps.plan.outputs.build == 'yes'
+        with:
+          node-version: 22
+
+      - name: Build (log withheld - private source)
+        if: steps.plan.outputs.build == 'yes'
+        working-directory: ghs
+        run: |
+          set -uo pipefail
+          if ! npm ci --no-audit --no-fund > /tmp/npm.log 2>&1; then echo "::error::npm ci failed (log withheld)"; exit 1; fi
+          if ! npm run build > /tmp/build.log 2>&1; then
+            echo "::error::astro build failed (log withheld: private source). Reproduce locally with npm run build."
+            grep -cE "error" /tmp/build.log | sed 's/^/error lines: /'; exit 1
+          fi
+          echo "pages: $(find dist -name index.html | wc -l), files: $(find dist -type f | wc -l)"
+          python3 pipeline/site_schema.py x --site dist
+          printf '{"commit":"%s","data":"%s","built_at":"%s","run":"%s"}\n' \
+            "${{ steps.plan.outputs.commit }}" "${{ steps.plan.outputs.data }}" "$(date -u +%FT%TZ)" "${{ github.run_id }}" > dist/build.json
+          tar -czf ../site.tgz -C dist .
+          ls -l ../site.tgz | awk '{print "site.tgz bytes:", $5}'
+
+      - name: Install on the server (validate, swap, smoke test, auto-rollback)
+        if: steps.plan.outputs.build == 'yes'
+        env:
+          HOST: ${{ secrets.HS_INTAKE_HOST }}
+          PORT: ${{ secrets.HS_INTAKE_PORT }}
+        run: |
+          ssh -q -i ~/.ssh/intake -p "$PORT" -o BatchMode=yes -o StrictHostKeyChecking=yes -o ConnectTimeout=30 \
+              "hs-intake@$HOST" ghs-site < site.tgz
+
+      - name: Clean up
+        if: always()
+        run: rm -rf ghs site.tgz data.tgz ~/.ssh/intake
+
+  monitor:
+    needs: site
+    if: always()
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      - name: Source freshness (fails -> owner e-mail)
+        run: |
+          set -euo pipefail
+          curl -sf --max-time 60 "$SITE/data/freshness.json" -o f.json
+          python3 - <<'PY'
+          import datetime as dt, json, sys
+          doc = json.load(open("f.json")); now = dt.datetime.now(dt.timezone.utc)
+          def p(s):
+              if not s: return None
+              d = dt.datetime.fromisoformat(s.replace("Z", "+00:00")); return d if d.tzinfo else d.replace(tzinfo=dt.timezone.utc)
+          def status(i):   # same rule as GHS pipeline/freshness.py and the /sources/ page
+              if i.get("state") == "error" or not i.get("last_success"): return "error"
+              if (now - p(i["last_success"])).total_seconds() > i["max_age_days"] * 86400: return "stale"
+              if i.get("state") == "stale": return "stale"
+              per = p(i.get("latest_period"))
+              if i.get("max_lag_days") is not None and per and (now - per).total_seconds() > i["max_lag_days"] * 86400: return "stale"
+              return "ok"
+          gen = p(doc["generated_at"])
+          bad = [(status(i), i) for i in doc["items"] if status(i) != "ok"]
+          for st, i in bad:
+              print(f"::warning::{st}: {i['label']} ({i['id']}) last_success={i['last_success']} latest_period={i.get('latest_period')}")
+          print(f"freshness.json generated {doc['generated_at']}; {len(doc['items'])} sources, {len(bad)} not ok")
+          if (now - gen).total_seconds() > 2 * 86400:
+              print("::error::freshness.json itself is older than 2 days (server refresh jobs not running?)"); sys.exit(1)
+          sys.exit(1 if bad else 0)
+          PY
+      - name: Site build did not succeed
+        if: needs.site.result != 'success'
+        run: |
+          echo "::error::site job result: ${{ needs.site.result }}"
+          exit 1

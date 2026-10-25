@@ -193,6 +193,21 @@ paho.org 拦截云服务器出口 IP（阿里云 403），GitHub 托管 runner �
 服务器上的日常采集（11:00）发现 `paho` 配了 `inbox` 且文件存在，就读收件箱而不联网；收件箱超过 72 小时未更新
 → 该来源标 `stale`，不造数据。主机、端口、密钥、known_hosts 都在仓库 secrets 里，日志只打印条数。
 
+## 定时一览（北京时间）
+
+| 时间 | 在哪 | 任务 |
+|---|---|---|
+| 每天 10:30 | Actions `fetch-blocked.yml` | PAHO → hs 收件箱；NNDSS CSV → GHS 原始缓存 |
+| 每天 11:00 | 服务器 `health-sources.timer` | hs 采集全部来源 |
+| 采集成功后 + 11:45/13:00 兜底 | 服务器 `hs-push@cdc` | 推公卫前沿 |
+| 每天 11:30 | 服务器 `ghs-events-refresh` | GHS 事件页数据 + 新鲜度 |
+| 周一、周四 12:00 | 服务器 `ghs-pipeline-refresh` | GHS 时间序列 |
+| 每天 13:40 | Actions `ghs-site.yml` | GHS 建站安装（数据/代码有变才建）+ 新鲜度监控（过期/失败 → 邮件给仓库所有者） |
+| 周日 11:30 | 服务器 `hs-reconcile@cdc` | 与 CloudBase 对账 |
+
+`ghs-site.yml` 用只读 deploy key 拉 GHS 私有仓库，只在定时/手动触发时运行（fork 的 PR 拿不到 secrets），构建日志不公开、
+不上传产物和缓存；离开 runner 的只有本来就公开的网站文件。
+
 ## 安全
 
 - 仓库公开。密钥、订阅方配置（`deploy/subscribers/*.toml`）、`.env*`、`*.key` 等由 `.gitignore` 屏蔽，只放 `*.example`。
