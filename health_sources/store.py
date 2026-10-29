@@ -325,11 +325,15 @@ class Store:
 
     # ---- 下游推送（push.py）：按 (updated_at, id) / (deleted_at, id) 复合游标增量读 ----
 
-    def changed_since(self, cursor: dict | None, since: str, limit: int) -> list[dict]:
+    def changed_since(self, cursor: dict | None, since: str, limit: int,
+                      sources: list[str] | None = None) -> list[dict]:
         """updated_at+id 严格大于游标、且在窗口内（COALESCE(published_at, first_seen_at) >= since）的记录，按游标顺序。
-        每条另带 hs_updated_at（游标用）和 sort_key（= 导出排序键）。"""
+        每条另带 hs_updated_at（游标用）和 sort_key（= 导出排序键）。sources 非空时只返回这些 source。"""
         sql = "SELECT * FROM records WHERE COALESCE(published_at, first_seen_at) >= ?"
         args: list = [since]
+        if sources:
+            sql += " AND source IN (%s)" % ",".join("?" * len(sources))
+            args += list(sources)
         if cursor:
             sql += " AND (updated_at > ? OR (updated_at = ? AND id > ?))"
             args += [cursor["updatedAt"], cursor["updatedAt"], cursor["id"]]
@@ -343,22 +347,33 @@ class Store:
             out.append(rec)
         return out
 
-    def tombstones_since(self, cursor: dict | None, limit: int) -> list[dict]:
+    def tombstones_since(self, cursor: dict | None, limit: int,
+                         sources: list[str] | None = None) -> list[dict]:
         if not self._has_table("tombstones"):
             return []
-        sql, args = "SELECT * FROM tombstones", []
+        where, args = [], []
+        if sources:
+            where.append("source IN (%s)" % ",".join("?" * len(sources)))
+            args += list(sources)
         if cursor:
-            sql += " WHERE deleted_at > ? OR (deleted_at = ? AND id > ?)"
+            where.append("(deleted_at > ? OR (deleted_at = ? AND id > ?))")
             args += [cursor["deletedAt"], cursor["deletedAt"], cursor["id"]]
+        sql = "SELECT * FROM tombstones"
+        if where:
+            sql += " WHERE " + " AND ".join(where)
         sql += " ORDER BY deleted_at, id LIMIT ?"
         args.append(limit)
         return [dict(r) for r in self.conn.execute(sql, args)]
 
-    def window_records(self, since: str):
-        """对账用：窗口内全部记录（游标迭代）。"""
-        for r in self.conn.execute(
-            "SELECT * FROM records WHERE COALESCE(published_at, first_seen_at) >= ? ORDER BY id", (since,)
-        ):
+    def window_records(self, since: str, sources: list[str] | None = None):
+        """对账用：窗口内全部记录（游标迭代）。sources 非空时只含这些 source。"""
+        sql = "SELECT * FROM records WHERE COALESCE(published_at, first_seen_at) >= ?"
+        args: list = [since]
+        if sources:
+            sql += " AND source IN (%s)" % ",".join("?" * len(sources))
+            args += list(sources)
+        sql += " ORDER BY id"
+        for r in self.conn.execute(sql, args):
             rec = self._from_row(r)
             rec["hs_updated_at"] = r["updated_at"]
             rec["sort_key"] = r["published_at"] or r["first_seen_at"]
