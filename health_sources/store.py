@@ -36,7 +36,9 @@ CREATE TABLE IF NOT EXISTS records (
     article_type TEXT,
     authors TEXT,                     -- JSON 数组或 NULL
     issue_order INTEGER,
-    feed_url TEXT
+    feed_url TEXT,
+    disease_tags TEXT NOT NULL DEFAULT '[]',
+    country_iso3 TEXT NOT NULL DEFAULT '[]'
 );
 CREATE INDEX IF NOT EXISTS idx_records_source ON records(source);
 CREATE INDEX IF NOT EXISTS idx_records_published ON records(published_at);
@@ -83,6 +85,8 @@ MIGRATIONS = {
     "authors": "ALTER TABLE records ADD COLUMN authors TEXT",
     "issue_order": "ALTER TABLE records ADD COLUMN issue_order INTEGER",
     "feed_url": "ALTER TABLE records ADD COLUMN feed_url TEXT",
+    "disease_tags": "ALTER TABLE records ADD COLUMN disease_tags TEXT NOT NULL DEFAULT '[]'",
+    "country_iso3": "ALTER TABLE records ADD COLUMN country_iso3 TEXT NOT NULL DEFAULT '[]'",
 }
 
 CONTENT_FIELDS = [f for f in FIELDS if f not in ("id", "fetched_at", "status")]
@@ -116,6 +120,8 @@ class Store:
         for f in FIELDS:            # v0.2 及更早构造的记录没有卷期字段：按 null 处理
             row.setdefault(f, None)
         row["keywords"] = json.dumps(rec["keywords"], ensure_ascii=False)
+        row["disease_tags"] = json.dumps(rec.get("disease_tags") or [], ensure_ascii=False)
+        row["country_iso3"] = json.dumps(rec.get("country_iso3") or [], ensure_ascii=False)
         row["figures_allowed"] = int(bool(rec["figures_allowed"]))
         row["authors"] = json.dumps(rec["authors"], ensure_ascii=False) if rec.get("authors") else None
         return row
@@ -124,6 +130,8 @@ class Store:
     def _from_row(row: sqlite3.Row) -> dict:
         rec = {f: row[f] for f in FIELDS}
         rec["keywords"] = json.loads(rec["keywords"])
+        rec["disease_tags"] = json.loads(rec["disease_tags"] or "[]")
+        rec["country_iso3"] = json.loads(rec["country_iso3"] or "[]")
         rec["figures_allowed"] = bool(rec["figures_allowed"])
         rec["authors"] = json.loads(rec["authors"]) if rec["authors"] else None
         return rec
@@ -317,11 +325,15 @@ class Store:
 
     # ---- 下游推送（push.py）：按 (updated_at, id) / (deleted_at, id) 复合游标增量读 ----
 
-    def changed_since(self, cursor: dict | None, since: str, limit: int) -> list[dict]:
+    def changed_since(self, cursor: dict | None, since: str, limit: int,
+                      sources: list[str] | None = None) -> list[dict]:
         """updated_at+id 严格大于游标、且在窗口内（COALESCE(published_at, first_seen_at) >= since）的记录，按游标顺序。
-        每条另带 hs_updated_at（游标用）和 sort_key（= 导出排序键）。"""
+        每条另带 hs_updated_at（游标用）和 sort_key（= 导出排序键）。sources 非空时只返回这些 source。"""
         sql = "SELECT * FROM records WHERE COALESCE(published_at, first_seen_at) >= ?"
         args: list = [since]
+        if sources:
+            sql += " AND source IN (%s)" % ",".join("?" * len(sources))
+            args += list(sources)
         if cursor:
             sql += " AND (updated_at > ? OR (updated_at = ? AND id > ?))"
             args += [cursor["updatedAt"], cursor["updatedAt"], cursor["id"]]
@@ -335,22 +347,33 @@ class Store:
             out.append(rec)
         return out
 
-    def tombstones_since(self, cursor: dict | None, limit: int) -> list[dict]:
+    def tombstones_since(self, cursor: dict | None, limit: int,
+                         sources: list[str] | None = None) -> list[dict]:
         if not self._has_table("tombstones"):
             return []
-        sql, args = "SELECT * FROM tombstones", []
+        where, args = [], []
+        if sources:
+            where.append("source IN (%s)" % ",".join("?" * len(sources)))
+            args += list(sources)
         if cursor:
-            sql += " WHERE deleted_at > ? OR (deleted_at = ? AND id > ?)"
+            where.append("(deleted_at > ? OR (deleted_at = ? AND id > ?))")
             args += [cursor["deletedAt"], cursor["deletedAt"], cursor["id"]]
+        sql = "SELECT * FROM tombstones"
+        if where:
+            sql += " WHERE " + " AND ".join(where)
         sql += " ORDER BY deleted_at, id LIMIT ?"
         args.append(limit)
         return [dict(r) for r in self.conn.execute(sql, args)]
 
-    def window_records(self, since: str):
-        """对账用：窗口内全部记录（游标迭代）。"""
-        for r in self.conn.execute(
-            "SELECT * FROM records WHERE COALESCE(published_at, first_seen_at) >= ? ORDER BY id", (since,)
-        ):
+    def window_records(self, since: str, sources: list[str] | None = None):
+        """对账用：窗口内全部记录（游标迭代）。sources 非空时只含这些 source。"""
+        sql = "SELECT * FROM records WHERE COALESCE(published_at, first_seen_at) >= ?"
+        args: list = [since]
+        if sources:
+            sql += " AND source IN (%s)" % ",".join("?" * len(sources))
+            args += list(sources)
+        sql += " ORDER BY id"
+        for r in self.conn.execute(sql, args):
             rec = self._from_row(r)
             rec["hs_updated_at"] = r["updated_at"]
             rec["sort_key"] = r["published_at"] or r["first_seen_at"]

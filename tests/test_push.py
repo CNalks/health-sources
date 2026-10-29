@@ -12,7 +12,6 @@ from tests.test_core import good_record
 
 NOW = datetime(2026, 10, 25, 3, 0, tzinfo=timezone.utc)
 
-
 class FakeSubscriber:
     """与 CDC-Weekly-Digest cloudfunctions/hs-ingest 相同语义的内存实现。"""
 
@@ -223,6 +222,32 @@ class PushTests(unittest.TestCase):
         sizes = [len(b["records"]) for b in fake.bodies if b["action"] == "upsert"]
         self.assertEqual(sizes, [2, 2])
         self.assertEqual(len(fake.live()), 4)
+
+
+    def test_allowed_sources_skips_news(self):
+        """cdc 白名单外的新闻源不得推到 CloudBase（此前 cdc_thn → source not allowed）。"""
+        self.store.upsert(recs(3, source="eid") + recs(2, start=10, source="cdc_thn"), "2026-10-24T03:00:00+00:00")
+        self.sub.allowed_sources = ["eid", "mmwr"]
+        fake = FakeSubscriber()
+        s = P.push(self.ro(), fake, self.sub, now=NOW)
+        self.assertTrue(s["complete"])
+        self.assertEqual(s["records"], 3)
+        self.assertEqual(set(fake.live()), {rid(1), rid(2), rid(3)})
+        self.assertTrue(all(d["source"] == "eid" for d in fake.live().values()))
+
+    def test_drop_fields_strips_tags(self):
+        rows = recs(1)
+        rows[0]["disease_tags"] = ["influenza"]
+        rows[0]["country_iso3"] = ["USA"]
+        self.store.upsert(rows, "2026-10-24T03:00:00+00:00")
+        self.sub.drop_fields = ["disease_tags", "country_iso3"]
+        fake = FakeSubscriber()
+        P.push(self.ro(), fake, self.sub, now=NOW)
+        live = fake.live()[rid(1)]
+        self.assertNotIn("disease_tags", live)
+        self.assertNotIn("country_iso3", live)
+        self.assertNotIn("fetched_at", live)
+
 
 
 class FakeHttpResp:

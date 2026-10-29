@@ -1,0 +1,340 @@
+{
+ "schemaVersion": 1,
+ "vocab": "diseases",
+ "version": "0.1.0",
+ "updated": "2026-10-25",
+ "description": "TEST FIXTURE subset of 公卫前沿 diseases vocab — production loads full file via HS_VOCAB_DISEASES",
+ "items": [
+  {
+   "code": "covid19",
+   "zh": "新冠病毒感染",
+   "en": "COVID-19",
+   "group": "呼吸道传染病",
+   "priority": true,
+   "aliases": [
+    "COVID-19",
+    "COVID",
+    "coronavirus disease 2019",
+    "SARS-CoV-2"
+   ],
+   "acronyms": []
+  },
+  {
+   "code": "mers",
+   "zh": "中东呼吸综合征",
+   "en": "MERS",
+   "group": "呼吸道传染病",
+   "priority": true,
+   "aliases": [
+    "Middle East respiratory syndrome"
+   ],
+   "acronyms": [
+    "MERS",
+    "MERS-CoV"
+   ]
+  },
+  {
+   "code": "influenza",
+   "zh": "流行性感冒",
+   "en": "Influenza",
+   "group": "呼吸道传染病",
+   "priority": true,
+   "aliases": [
+    "influenza",
+    "flu",
+    "seasonal influenza"
+   ],
+   "acronyms": [
+    "ILI"
+   ]
+  },
+  {
+   "code": "avian_influenza",
+   "zh": "人感染动物源性流感",
+   "en": "Zoonotic/avian influenza",
+   "group": "呼吸道传染病",
+   "priority": true,
+   "aliases": [
+    "avian influenza",
+    "bird flu",
+    "highly pathogenic avian influenza",
+    "swine influenza",
+    "zoonotic influenza"
+   ],
+   "acronyms": [
+    "HPAI",
+    "H5N1",
+    "H5N6",
+    "H5N8",
+    "H5Nx",
+    "H7N9",
+    "H9N2",
+    "H10N3",
+    "H3N8",
+    "H5"
+   ],
+   "broader": "influenza"
+  },
+  {
+   "code": "rsv",
+   "zh": "呼吸道合胞病毒感染",
+   "en": "RSV",
+   "group": "呼吸道传染病",
+   "priority": true,
+   "aliases": [
+    "respiratory syncytial virus"
+   ],
+   "acronyms": [
+    "RSV"
+   ]
+  },
+  {
+   "code": "tuberculosis",
+   "zh": "结核病",
+   "en": "Tuberculosis",
+   "group": "呼吸道传染病",
+   "priority": true,
+   "aliases": [
+    "tuberculosis",
+    "Mycobacterium tuberculosis",
+    "multidrug-resistant tuberculosis"
+   ],
+   "acronyms": [
+    "TB",
+    "MDR-TB",
+    "RR-TB",
+    "XDR-TB",
+    "LTBI"
+   ]
+  },
+  {
+   "code": "pertussis",
+   "zh": "百日咳",
+   "en": "Pertussis",
+   "group": "呼吸道传染病",
+   "priority": true,
+   "aliases": [
+    "pertussis",
+    "whooping cough",
+    "Bordetella pertussis"
+   ],
+   "acronyms": []
+  },
+  {
+   "code": "measles",
+   "zh": "麻疹",
+   "en": "Measles",
+   "group": "呼吸道传染病",
+   "priority": true,
+   "aliases": [
+    "measles",
+    "rubeola"
+   ],
+   "acronyms": []
+  },
+  {
+   "code": "dengue",
+   "zh": "登革热",
+   "en": "Dengue",
+   "group": "虫媒与自然疫源性疾病",
+   "priority": true,
+   "aliases": [
+    "dengue",
+    "dengue fever",
+    "severe dengue"
+   ],
+   "acronyms": [
+    "DENV"
+   ]
+  },
+  {
+   "code": "chikungunya",
+   "zh": "基孔肯雅热",
+   "en": "Chikungunya",
+   "group": "虫媒与自然疫源性疾病",
+   "priority": true,
+   "aliases": [
+    "chikungunya"
+   ],
+   "acronyms": [
+    "CHIKV"
+   ]
+  },
+  {
+   "code": "zika",
+   "zh": "寨卡病毒病",
+   "en": "Zika",
+   "group": "虫媒与自然疫源性疾病",
+   "priority": true,
+   "aliases": [
+    "Zika",
+    "Zika virus"
+   ],
+   "acronyms": [
+    "ZIKV"
+   ]
+  },
+  {
+   "code": "west_nile",
+   "zh": "西尼罗病毒病",
+   "en": "West Nile virus disease",
+   "group": "虫媒与自然疫源性疾病",
+   "priority": true,
+   "aliases": [
+    "West Nile",
+    "West Nile virus"
+   ],
+   "acronyms": [
+    "WNV"
+   ]
+  },
+  {
+   "code": "yellow_fever",
+   "zh": "黄热病",
+   "en": "Yellow fever",
+   "group": "虫媒与自然疫源性疾病",
+   "priority": true,
+   "aliases": [
+    "yellow fever"
+   ],
+   "acronyms": []
+  },
+  {
+   "code": "malaria",
+   "zh": "疟疾",
+   "en": "Malaria",
+   "group": "虫媒与自然疫源性疾病",
+   "priority": true,
+   "aliases": [
+    "malaria",
+    "Plasmodium falciparum",
+    "Plasmodium vivax",
+    "Plasmodium knowlesi",
+    "Plasmodium"
+   ],
+   "acronyms": []
+  },
+  {
+   "code": "hantavirus",
+   "zh": "汉坦病毒感染",
+   "en": "Hantavirus infection",
+   "group": "人兽共患与新发病原",
+   "priority": true,
+   "aliases": [
+    "hantavirus",
+    "Andes virus",
+    "hantavirus pulmonary syndrome",
+    "hemorrhagic fever with renal syndrome",
+    "Hantaan virus",
+    "Seoul virus",
+    "Puumala virus"
+   ],
+   "acronyms": [
+    "HFRS",
+    "HPS"
+   ]
+  },
+  {
+   "code": "ebola",
+   "zh": "埃博拉病",
+   "en": "Ebola disease",
+   "group": "人兽共患与新发病原",
+   "priority": true,
+   "aliases": [
+    "Ebola",
+    "Ebola virus",
+    "Ebola disease",
+    "Bundibugyo virus",
+    "Sudan virus",
+    "Sudan virus disease"
+   ],
+   "acronyms": [
+    "EVD"
+   ]
+  },
+  {
+   "code": "marburg",
+   "zh": "马尔堡病毒病",
+   "en": "Marburg virus disease",
+   "group": "人兽共患与新发病原",
+   "priority": true,
+   "aliases": [
+    "Marburg",
+    "Marburg virus"
+   ],
+   "acronyms": [
+    "MVD"
+   ]
+  },
+  {
+   "code": "lassa",
+   "zh": "拉沙热",
+   "en": "Lassa fever",
+   "group": "人兽共患与新发病原",
+   "priority": true,
+   "aliases": [
+    "Lassa",
+    "Lassa fever"
+   ],
+   "acronyms": []
+  },
+  {
+   "code": "mpox",
+   "zh": "猴痘",
+   "en": "Mpox",
+   "group": "人兽共患与新发病原",
+   "priority": true,
+   "aliases": [
+    "mpox",
+    "monkeypox"
+   ],
+   "acronyms": [
+    "MPXV"
+   ]
+  },
+  {
+   "code": "rift_valley_fever",
+   "zh": "裂谷热",
+   "en": "Rift Valley fever",
+   "group": "人兽共患与新发病原",
+   "priority": true,
+   "aliases": [
+    "Rift Valley fever"
+   ],
+   "acronyms": [
+    "RVF",
+    "RVFV"
+   ]
+  },
+  {
+   "code": "cholera",
+   "zh": "霍乱",
+   "en": "Cholera",
+   "group": "肠道传染病",
+   "priority": true,
+   "aliases": [
+    "cholera",
+    "Vibrio cholerae"
+   ],
+   "acronyms": []
+  },
+  {
+   "code": "polio",
+   "zh": "脊髓灰质炎",
+   "en": "Poliomyelitis",
+   "group": "肠道传染病",
+   "priority": true,
+   "aliases": [
+    "poliomyelitis",
+    "polio",
+    "poliovirus",
+    "acute flaccid paralysis"
+   ],
+   "acronyms": [
+    "cVDPV",
+    "cVDPV2",
+    "WPV1"
+   ]
+  }
+ ]
+}

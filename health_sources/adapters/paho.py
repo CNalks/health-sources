@@ -7,7 +7,7 @@ paho.org 按出口 IP 拦截机房地址（阿里云、多数国内/海外云主
 - 收件箱（阿里云日常采集）：配置了 `inbox` 且文件存在时，读 Actions 推来的 JSONL（已是统一字段），
   文件超过 `inbox_max_age_hours` 视为过期 → 抛错，runner 照常把该来源标 stale，不造数据。
 
-只取标题、日期、原文链接（PDF 文档页），不抓正文。
+取标题、日期、原文链接；直连时可选抓页面 meta description 作 summary（不抓正文）。
 """
 from __future__ import annotations
 
@@ -29,6 +29,43 @@ ITEM_RE = re.compile(
 )
 KIND_RE = re.compile(r"\b(Epidemiological (?:Alert|Update)|Alerta Epidemiol[oó]gica|Actualizaci[oó]n Epidemiol[oó]gica|"
                      r"Public Health Emergency|Briefing note|Nota informativa)\b", re.I)
+
+META_DESC_RE = re.compile(
+    r'<meta[^>]+(?:name|property)=["\'](?:description|og:description)["\'][^>]+content=["\']([^"\']+)["\']|'
+    r'<meta[^>]+content=["\']([^"\']+)["\'][^>]+(?:name|property)=["\'](?:description|og:description)["\']',
+    re.I,
+)
+
+
+def _page_summary(http, url: str, max_chars: int = 400) -> str | None:
+    """直连详情页时取 meta description；失败返回 None，不造文。"""
+    try:
+        html_text = http.get(url).content.decode("utf-8", "replace")
+    except Exception:
+        return None
+    m = META_DESC_RE.search(html_text)
+    if not m:
+        return None
+    text = html.unescape((m.group(1) or m.group(2) or "")).strip()
+    text = re.sub(r"\s+", " ", text)
+    if len(text) < 40:
+        return None
+    return text[:max_chars]
+
+
+def _fill_summaries(records: list[dict], http, cfg: dict) -> None:
+    if not cfg.get("fetch_summaries", True):
+        return
+    delay = float(cfg.get("summary_delay_seconds", 0.4))
+    for rec in records:
+        if rec.get("summary"):
+            continue
+        s = _page_summary(http, rec["url"])
+        if s:
+            rec["summary"] = s
+        if delay:
+            time.sleep(delay)
+
 
 
 def parse(payload: bytes, cfg: dict, fetched_at: str) -> list[dict]:
@@ -80,4 +117,6 @@ def fetch(cfg: dict, http, fetched_at: str) -> list[dict]:
     for page in range(pages):
         params = {"page": str(page)} if page else None
         out += parse(http.get(cfg["url"], params=params).content, cfg, fetched_at)
-    return out[: cfg.get("max_items", 30)]
+    out = out[: cfg.get("max_items", 30)]
+    _fill_summaries(out, http, cfg)
+    return out

@@ -193,5 +193,88 @@ sources:
     figures_allowed: false
     # paho.org 拦机房 IP（阿里云 403）：GitHub Actions 直连抓取后推到服务器收件箱，日常采集读收件箱。
     # 收件箱缺失/超时 → 该来源标 stale，不造数据。见 README「被拦来源（GitHub Actions 代抓）」。
+    # Actions 直连时会尝试抓页面 meta description 填 summary。
+    fetch_summaries: true
+    summary_delay_seconds: 0.4
     inbox: "/var/lib/health-sources/inbox/paho.jsonl"
+    inbox_max_age_hours: 72
+
+  - id: ukhsa
+    name: "UK Health Security Agency (news)"
+    adapter: rss
+    kind: news
+    lang: en
+    url: "https://www.gov.uk/search/news-and-communications.atom?organisations%5B%5D=uk-health-security-agency"
+    max_items: 30
+    doi_from_url: false
+    feed_summary: true
+    license: "Open Government Licence v3.0 (Crown copyright)"
+    figures_allowed: true
+    # GOV.UK Atom；GHS 侧再按疫情关键词筛选展示
+
+  - id: cdc_han
+    name: "US CDC Health Alert Network (HAN)"
+    adapter: rss
+    kind: news
+    lang: en
+    url: "https://tools.cdc.gov/api/v2/resources/media/413690.rss"
+    max_items: 20
+    doi_from_url: false
+    feed_summary: true
+    license: "Public Domain (U.S. CDC)"
+    figures_allowed: true
+    allow_empty: true   # feed 经常无新条目；空结果算成功，不标 stale
+    # 紧急卫生公告；条数通常很少
+
+  - id: hk_chp
+    name: "Hong Kong CHP press releases"
+    adapter: rss
+    kind: news
+    lang: en
+    url: "https://www.chp.gov.hk/rss/pressreleases_en_RSS.xml"
+    url_origin: "https://www.chp.gov.hk"
+    max_items: 30
+    doi_from_url: false
+    feed_summary: true
+    license: "© Hong Kong CHP; reuse subject to CHP Important Notices"
+    figures_allowed: false
+
+  - id: who_afro
+    name: "WHO AFRO Emergencies"
+    adapter: rss
+    kind: news
+    lang: en
+    url: "https://www.afro.who.int/rss/emergencies.xml"
+    max_items: 20
+    doi_from_url: false
+    feed_summary: true
+    license: "CC BY-NC-SA 3.0 IGO (WHO)"
+    figures_allowed: false
+
+  - id: phac_news
+    name: "Canada Health / PHAC news (GC News)"
+    adapter: rss
+    kind: news
+    lang: en
+    url: "https://api.io.canada.ca/io-server/gc/news/en/v2?dept=departmentofhealth&sort=publishedDate&orderBy=desc&publishedDate%3E=2024-01-01&pick=40&format=atom&atomtitle=Health%20Canada"
+    max_items: 30
+    doi_from_url: false
+    feed_summary: true
+    license: "Crown copyright (Canada); verify per-item Open Government Licence"
+    figures_allowed: false
+    # 卫生部综合新闻；旅行健康 notices 旧 RSS 已 404。GHS 侧过滤非疫情条目。
+
+  - id: tw_cdc
+    name: "Taiwan CDC English news"
+    adapter: rss
+    kind: news
+    lang: en
+    url: "https://www.cdc.gov.tw/En/RSS/RssXml/sOn2_m9QgxKqhZ7omgiz1A?type=1"
+    max_items: 30
+    doi_from_url: false
+    feed_summary: true
+    license: "© Taiwan CDC; subject to site terms"
+    figures_allowed: false
+    # 阿里云不可达：GitHub Actions 代抓后推 inbox（同 PAHO）
+    inbox: "/var/lib/health-sources/inbox/tw_cdc.jsonl"
     inbox_max_age_hours: 72

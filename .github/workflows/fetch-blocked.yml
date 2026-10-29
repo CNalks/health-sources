@@ -3,6 +3,7 @@ name: Fetch sources blocked from the server
 # paho.org (and sometimes data.cdc.gov) refuse requests from cloud-server IPs; GitHub-hosted runners get through.
 #   - PAHO epidemiological alerts: hs `paho` adapter (collect = fetch + schema validation, no database) -> server inbox;
 #     the server's daily hs run (11:00 Asia/Shanghai) reads the inbox like any other source.
+#   - Taiwan CDC English news RSS: same inbox pattern (Aliyun cannot reach cdc.gov.tw).
 #   - US CDC NNDSS weekly CSV: NOT an hs record (time series stay out of hs); passed through to the GHS pipeline's
 #     raw cache, ahead of its Monday 12:00 run.
 # Delivery: one restricted SSH key whose server side only runs a receiver script (validate + atomic replace).
@@ -35,7 +36,16 @@ jobs:
       - name: PAHO alerts (hs paho adapter)
         id: paho
         continue-on-error: true
+        env:
+          HS_DIRECT_FETCH: "1"
         run: python -m health_sources collect --only paho --out out/paho.jsonl --min-records 5
+
+      - name: Taiwan CDC English news (hs tw_cdc adapter)
+        id: tw_cdc
+        continue-on-error: true
+        env:
+          HS_DIRECT_FETCH: "1"
+        run: python -m health_sources collect --only tw_cdc --out out/tw_cdc.jsonl --min-records 3
 
       - name: NNDSS weekly CSV (US residents, same query as the GHS pipeline)
         id: nndss
@@ -54,7 +64,7 @@ jobs:
           PY
 
       - name: Deliver to server
-        if: steps.paho.outcome == 'success' || steps.nndss.outcome == 'success'
+        if: steps.paho.outcome == 'success' || steps.tw_cdc.outcome == 'success' || steps.nndss.outcome == 'success'
         env:
           KEY: ${{ secrets.HS_INTAKE_SSH_KEY }}
           HOST: ${{ secrets.HS_INTAKE_HOST }}
@@ -71,12 +81,13 @@ jobs:
           }
           rc=0
           if [ "${{ steps.paho.outcome }}" = success ]; then send paho out/paho.jsonl || rc=1; fi
+          if [ "${{ steps.tw_cdc.outcome }}" = success ]; then send tw_cdc out/tw_cdc.jsonl || rc=1; fi
           if [ "${{ steps.nndss.outcome }}" = success ]; then send nndss out/cdc_nndss_us.csv || rc=1; fi
           rm -f ~/.ssh/intake
           exit $rc
 
       - name: Fail the run if a source failed
-        if: steps.paho.outcome != 'success' || steps.nndss.outcome != 'success'
+        if: steps.paho.outcome != 'success' || steps.tw_cdc.outcome != 'success' || steps.nndss.outcome != 'success'
         run: |
-          echo "paho=${{ steps.paho.outcome }} nndss=${{ steps.nndss.outcome }}"
+          echo "paho=${{ steps.paho.outcome }} tw_cdc=${{ steps.tw_cdc.outcome }} nndss=${{ steps.nndss.outcome }}"
           exit 1

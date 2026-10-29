@@ -35,6 +35,9 @@ FIELDS: dict[str, tuple[type | tuple[type, ...], bool]] = {
     "authors": (list, True),
     "issue_order": (int, True),     # 在本期 feed 里的顺序（0 起），按期组织时用
     "feed_url": (str, True),        # 这条记录最近一次来自哪个 feed / 接口
+    # 可选规范化标签（v0.5）：引用公卫前沿词表 code；不确定则空列表
+    "disease_tags": (list, False),
+    "country_iso3": (list, False),
 }
 
 _ID_RE = re.compile(r"^[0-9a-f]{16}$")
@@ -100,4 +103,15 @@ def validate(record: dict) -> list[str]:
         errors.append("keywords must be non-empty strings")
     if len(kws) > 10:
         errors.append("keywords at most 10")
+    for fname, maxlen in (("disease_tags", 10), ("country_iso3", 10)):
+        vals = record.get(fname)
+        if not isinstance(vals, list):
+            errors.append(f"{fname} must be a list")
+            continue
+        if not all(isinstance(v, str) and v.strip() for v in vals):
+            errors.append(f"{fname} must be non-empty strings")
+        if len(vals) > maxlen:
+            errors.append(f"{fname} at most {maxlen}")
+        if fname == "country_iso3" and any(not re.fullmatch(r"[A-Z]{3}", v) for v in vals):
+            errors.append("country_iso3 must be ISO 3166-1 alpha-3")
     return errors

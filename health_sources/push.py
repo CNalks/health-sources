@@ -35,16 +35,19 @@ DEFAULT_CONFIG_DIR = "/etc/health-sources/subscribers"
 
 # ---------------- 记录整形 ----------------
 
-def content_hash(rec: dict) -> str:
+def content_hash(rec: dict, drop: tuple[str, ...] = ()) -> str:
     """对推送内容字段（不含 hs_updated_at / sort_key / content_hash 本身）做规范化 sha256。"""
-    body = {k: v for k, v in rec.items() if k not in ("hs_updated_at", "sort_key", "content_hash") and k not in SKIP_FIELDS}
+    skip = set(SKIP_FIELDS) | set(drop) | {"hs_updated_at", "sort_key", "content_hash"}
+    body = {k: v for k, v in rec.items() if k not in skip}
     raw = json.dumps(body, ensure_ascii=False, sort_keys=True, separators=(",", ":"))
     return hashlib.sha256(raw.encode("utf-8")).hexdigest()
 
 
-def to_push(rec: dict) -> dict:
-    out = {k: v for k, v in rec.items() if k not in SKIP_FIELDS}
-    out["content_hash"] = content_hash(out)
+def to_push(rec: dict, drop: list[str] | tuple[str, ...] | None = None) -> dict:
+    drop_t = tuple(drop or ())
+    skip = set(SKIP_FIELDS) | set(drop_t)
+    out = {k: v for k, v in rec.items() if k not in skip}
+    out["content_hash"] = content_hash(out, drop_t)
     return out
 
 
@@ -58,6 +61,10 @@ class Subscriber:
     batch_size: int = 100
     max_requests_per_run: int = 20
     max_body_bytes: int = 900_000       # 单次请求体上限（订阅方限 1 MB）
+    # 仅推这些 source（与 CloudBase hs-ingest SOURCES 对齐）；空 = 不限。新闻源等不得进 cdc。
+    allowed_sources: list[str] = field(default_factory=list)
+    # 额外丢掉的字段（CloudBase FIELDS 不含 tags）；fetched_at/status 仍由 SKIP_FIELDS 处理
+    drop_fields: list[str] = field(default_factory=list)
     options: dict = field(default_factory=dict)
     credentials: dict = field(default_factory=dict)
 
@@ -81,6 +88,8 @@ def load_subscriber(name: str, config_dir: str | Path = DEFAULT_CONFIG_DIR) -> S
         window_days=int(cfg.get("window_days", 400)), batch_size=int(cfg.get("batch_size", 100)),
         max_requests_per_run=int(cfg.get("max_requests_per_run", 20)),
         max_body_bytes=int(cfg.get("max_body_bytes", 900_000)),
+        allowed_sources=list(cfg.get("allowed_sources") or []),
+        drop_fields=list(cfg.get("drop_fields") or []),
         options=dict(cfg.get(cfg["transport"], {})),
     )
     # 密钥：优先 systemd LoadCredential（$CREDENTIALS_DIRECTORY/<name>.secret），否则 toml 里的 credentials_file
@@ -224,14 +233,17 @@ def push(store: Store, transport, sub: Subscriber, export_generated_at: str | No
          now: datetime | None = None, run_status: str = "ok") -> dict:
     now = now or datetime.now(timezone.utc)
     since = window_since(now, sub.window_days)
+    sources = sub.allowed_sources or None
+    drop = sub.drop_fields or []
     cur = transport.call({"action": "cursor"})
     rc, dc = cur.get("records"), cur.get("deleted")
     stats = {"requests": 1, "records": 0, "deleted": 0, "written": 0, "skipped": 0, "complete": False,
              "cursorBefore": {"records": rc, "deleted": dc}}
     try:
         for _ in range(sub.max_requests_per_run):
-            recs = _fit([to_push(r) for r in store.changed_since(rc, since, sub.batch_size)], sub.max_body_bytes)
-            dels = store.tombstones_since(dc, sub.batch_size)
+            raw = store.changed_since(rc, since, sub.batch_size, sources=sources)
+            recs = _fit([to_push(r, drop) for r in raw], sub.max_body_bytes)
+            dels = store.tombstones_since(dc, sub.batch_size, sources=sources)
             if not recs and not dels:
                 stats["complete"] = True
                 break
@@ -263,10 +275,12 @@ def reconcile(store: Store, transport, sub: Subscriber, now: datetime | None = N
     清单里没有、订阅方还没标删除的，由订阅方标 deleted（reason=reconcile）。"""
     now = now or datetime.now(timezone.utc)
     since = window_since(now, sub.window_days)
+    sources = sub.allowed_sources or None
+    drop = sub.drop_fields or []
     by_id = {}
     manifest = []
-    for r in store.window_records(since):
-        p = to_push(r)
+    for r in store.window_records(since, sources=sources):
+        p = to_push(r, drop)
         manifest.append([p["id"], p["content_hash"]])
         by_id[p["id"]] = p
     res = transport.call({"action": "reconcile", "subscriber": sub.name, "windowSince": since, "manifest": manifest})
