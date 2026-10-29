@@ -265,3 +265,28 @@ cat /var/lib/health-sources/status.json
    `fetch(cfg, http, fetched_at)`（联网）和 `parse(payload, cfg, fetched_at)`（纯解析，便于测试），
    并在 `adapters/__init__.py` 注册。
 3. 在 `tests/fixtures/` 放一份裁剪过的样本，补测试。
+
+## 规范化标签（v0.5，给 GHS）
+
+可选字段（可空列表，不破坏旧消费者）：
+
+| 字段 | 含义 |
+|---|---|
+| `disease_tags` | 公卫前沿病种词表 **code**（如 `ebola`、`influenza`），不在本库另维护词表 |
+| `country_iso3` | ISO 3166-1 alpha-3 |
+
+词表路径（`HS_VOCAB_DISEASES`，或 `/opt/cdc-weekly-digest/data/vocab/diseases.json` 等候选）。找不到词表时 `disease_tags` 为 `[]`，采集照常。
+
+## 新增新闻源（2026-10）
+
+| id | 说明 | 许可（sources.yaml） |
+|---|---|---|
+| `ukhsa` | UKHSA GOV.UK Atom | Open Government Licence v3.0 |
+| `cdc_han` | US CDC HAN RSS | Public Domain |
+| `hk_chp` | 港 CHP 英文公报 RSS | CHP Important Notices |
+| `who_afro` | WHO AFRO emergencies RSS | CC BY-NC-SA 3.0 IGO |
+| `phac_news` | 加拿大卫生新闻 Atom | Crown；逐条核对开放许可 |
+| `tw_cdc` | 台湾 CDC 英文新闻 | 站点条款；**Actions→inbox**（阿里云不可达） |
+
+数值/时间序列仍不进本库。
+

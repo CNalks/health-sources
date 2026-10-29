@@ -17,6 +17,7 @@ def good_record(**over):
         "fetched_at": NOW, "status": "ok", "pmcid": None, "enriched_at": None, "enrich_source": None,
         "journal": None, "volume": None, "issue": None, "pages": None, "article_type": None,
         "authors": None, "issue_order": None, "feed_url": None,
+        "disease_tags": [], "country_iso3": [],
     }
     rec.update(over)
     return rec
@@ -151,7 +152,7 @@ class RunnerTests(unittest.TestCase):
     def test_config_loads(self):
         cfg = runner.load_config(ROOT / "sources.yaml")
         ids = [s["id"] for s in cfg["sources"]]
-        self.assertEqual(ids, ["mmwr", "eurosurveillance", "who_don", "eid", "ecdc", "plos_ntds", "cdc_weekly", "cdc_thn", "africa_cdc", "paho"])
+        self.assertEqual(ids, ["mmwr", "eurosurveillance", "who_don", "eid", "ecdc", "plos_ntds", "cdc_weekly", "cdc_thn", "africa_cdc", "paho", "ukhsa", "cdc_han", "hk_chp", "who_afro", "phac_news", "tw_cdc"])
         self.assertEqual(cfg["retired_sources"], ["europepmc"])
         self.assertLessEqual(cfg["enrich"]["max_per_run"], 100)
         for s in cfg["sources"]:

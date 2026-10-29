@@ -1,7 +1,11 @@
-"""通用 RSS/Atom/RDF 适配器：Eurosurveillance、EID、ECDC、PLOS NTDs、CDC Weekly。"""
+"""通用 RSS/Atom/RDF 适配器：Eurosurveillance、EID、ECDC、PLOS NTDs、CDC Weekly；亦可 inbox（如台 CDC）。"""
 from __future__ import annotations
 
+import json
+import os
 import re
+import time
+from pathlib import Path
 
 import feedparser
 
@@ -47,6 +51,9 @@ def parse(payload: bytes, cfg: dict, fetched_at: str, feed_category: str | None 
         title = entry.get("title")
         if not url or not title:
             continue
+        base = cfg.get("url_origin") or cfg.get("link_base")
+        if base and url.startswith("/"):
+            url = base.rstrip("/") + url
         doi = _entry_doi(entry)
         if not doi and cfg.get("doi_from_url", True):
             doi = doi_from_url(url)
@@ -71,7 +78,29 @@ def parse(payload: bytes, cfg: dict, fetched_at: str, feed_category: str | None 
     return records
 
 
+def _from_inbox(path: Path, cfg: dict) -> list[dict]:
+    age_h = (time.time() - path.stat().st_mtime) / 3600
+    max_age = float(cfg.get("inbox_max_age_hours", 72))
+    if age_h > max_age:
+        raise RuntimeError(f"inbox {path.name} is {age_h:.0f} h old (> {max_age:.0f} h); last push from Actions missing")
+    out = []
+    for line in path.read_text(encoding="utf-8").splitlines():
+        line = line.strip()
+        if not line:
+            continue
+        rec = json.loads(line)
+        if rec.get("source") != cfg["id"]:
+            raise ValueError(f"inbox record from source {rec.get('source')!r}, expected {cfg['id']!r}")
+        out.append(rec)
+    if not out:
+        raise RuntimeError(f"inbox {path.name} is empty")
+    return out
+
+
 def fetch(cfg: dict, http, fetched_at: str) -> list[dict]:
+    inbox = cfg.get("inbox")
+    if inbox and not os.environ.get("HS_DIRECT_FETCH") and Path(inbox).exists():
+        return _from_inbox(Path(inbox), cfg)
     feeds = cfg.get("feeds") or [{"url": cfg["url"]}]
     records: list[dict] = []
     errors: list[str] = []

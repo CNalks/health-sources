@@ -126,7 +126,11 @@ def main(argv: list[str] | None = None) -> int:
         for src in cfg["sources"]:
             if src["id"] not in args.only:
                 continue
+            from . import tags as tagmod
             for rec in ADAPTERS[src["adapter"]].fetch(src, http, now):
+                rec.setdefault("disease_tags", [])
+                rec.setdefault("country_iso3", [])
+                tagmod.apply_tags(rec)
                 if validate(rec):
                     bad += 1
                 elif rec["id"] not in seen:

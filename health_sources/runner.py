@@ -14,6 +14,7 @@ import yaml
 from . import enrich as enrich_mod
 from .adapters import ADAPTERS
 from .http import Http
+from . import tags as tagmod
 from .schema import validate
 from .store import Store
 from .util import now_iso
@@ -84,6 +85,9 @@ def collect_source(src: dict, http: Http, store: Store, now: str) -> dict:
         raw = adapter.fetch(src, http, now)
         good, bad = [], []
         for rec in raw:
+            rec.setdefault("disease_tags", [])
+            rec.setdefault("country_iso3", [])
+            tagmod.apply_tags(rec)
             errs = validate(rec)
             (bad if errs else good).append((rec, errs))
         records = [r for r, _ in good]
@@ -94,6 +98,12 @@ def collect_source(src: dict, http: Http, store: Store, now: str) -> dict:
                 seen.add(r["id"])
                 deduped.append(r)
         if not deduped:
+            if src.get("allow_empty") and len(bad) == 0:
+                warnings = list(src.pop("_warnings", []))
+                store.mark_source_ok(src["id"], now, 0, warnings)
+                log.info("%s ok: 0 records (empty feed allowed)", src["id"])
+                return {"source": src["id"], "ok": True, "count": 0, "invalid": 0,
+                        "latest": None, "warnings": warnings, "new": 0, "updated": 0, "unchanged": 0}
             raise RuntimeError(f"no valid records (raw={len(raw)}, invalid={len(bad)})")
         warnings = list(src.pop("_warnings", []))
         warnings += [f"invalid record {r.get('url')}: {e}" for r, e in bad[:5]]

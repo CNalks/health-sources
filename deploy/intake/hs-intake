@@ -6,6 +6,7 @@ authorized_keys (user hs-intake):
 
 The client runs `ssh hs-intake@host <target> < file`. Only these targets exist; anything else is refused:
   paho       stdin JSONL  -> /var/lib/health-sources/inbox/paho.jsonl            (validated, atomic, .prev kept)
+  tw_cdc     stdin JSONL  -> /var/lib/health-sources/inbox/tw_cdc.jsonl          (validated, atomic, .prev kept)
   nndss      stdin CSV    -> /var/lib/ghs-pipeline/raw/cdc_nndss_us.csv          (validated, atomic, .prev kept)
   ghs-data   stdout       <- tar.gz of the public GHS site data (/var/www/ai4health/global/data, already public)
   ghs-site   stdin tar.gz -> /var/lib/ghs-site/incoming/site.tgz, then `sudo -n /usr/local/sbin/ghs-site-install`
@@ -24,9 +25,14 @@ import syslog
 TARGETS = {
     # name: (destination, max bytes)
     "paho": ("/var/lib/health-sources/inbox/paho.jsonl", 2_000_000),
+    "tw_cdc": ("/var/lib/health-sources/inbox/tw_cdc.jsonl", 2_000_000),
     "nndss": ("/var/lib/ghs-pipeline/raw/cdc_nndss_us.csv", 40_000_000),
 }
-PAHO_FIELDS = {"id", "source", "kind", "title", "url", "published_at", "fetched_at", "status"}
+JSONL_FIELDS = {"id", "source", "kind", "title", "url", "published_at", "fetched_at", "status"}
+JSONL_URL_PREFIX = {
+    "paho": "https://www.paho.org/",
+    "tw_cdc": "https://www.cdc.gov.tw/",
+}
 
 
 def fail(msg):
@@ -35,18 +41,19 @@ def fail(msg):
     sys.exit(1)
 
 
-def check_paho(data: bytes) -> str:
+def check_jsonl(data: bytes, source: str) -> str:
     lines = [l for l in data.decode("utf-8").splitlines() if l.strip()]
     if not 1 <= len(lines) <= 200:
-        fail(f"paho: {len(lines)} records")
+        fail(f"{source}: {len(lines)} records")
+    prefix = JSONL_URL_PREFIX[source]
     for l in lines:
         r = json.loads(l)
-        if not PAHO_FIELDS <= set(r):
-            fail("paho: missing fields")
-        if r["source"] != "paho" or r["kind"] != "news":
-            fail("paho: wrong source/kind")
-        if not str(r["url"]).startswith("https://www.paho.org/"):
-            fail("paho: foreign url")
+        if not JSONL_FIELDS <= set(r):
+            fail(f"{source}: missing fields")
+        if r["source"] != source or r["kind"] != "news":
+            fail(f"{source}: wrong source/kind")
+        if not str(r["url"]).startswith(prefix):
+            fail(f"{source}: foreign url")
     return f"{len(lines)} records"
 
 
@@ -110,7 +117,10 @@ def main():
     data = sys.stdin.buffer.read(cap + 1)
     if len(data) > cap:
         fail(f"{target}: payload over {cap} bytes")
-    summary = (check_paho if target == "paho" else check_nndss)(data)
+    if target in JSONL_URL_PREFIX:
+        summary = check_jsonl(data, target)
+    else:
+        summary = check_nndss(data)
     d = os.path.dirname(dest)
     fd, tmp = tempfile.mkstemp(dir=d, prefix=f".{os.path.basename(dest)}.")
     try:

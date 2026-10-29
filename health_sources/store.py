@@ -36,7 +36,9 @@ CREATE TABLE IF NOT EXISTS records (
     article_type TEXT,
     authors TEXT,                     -- JSON 数组或 NULL
     issue_order INTEGER,
-    feed_url TEXT
+    feed_url TEXT,
+    disease_tags TEXT NOT NULL DEFAULT '[]',
+    country_iso3 TEXT NOT NULL DEFAULT '[]'
 );
 CREATE INDEX IF NOT EXISTS idx_records_source ON records(source);
 CREATE INDEX IF NOT EXISTS idx_records_published ON records(published_at);
@@ -83,6 +85,8 @@ MIGRATIONS = {
     "authors": "ALTER TABLE records ADD COLUMN authors TEXT",
     "issue_order": "ALTER TABLE records ADD COLUMN issue_order INTEGER",
     "feed_url": "ALTER TABLE records ADD COLUMN feed_url TEXT",
+    "disease_tags": "ALTER TABLE records ADD COLUMN disease_tags TEXT NOT NULL DEFAULT '[]'",
+    "country_iso3": "ALTER TABLE records ADD COLUMN country_iso3 TEXT NOT NULL DEFAULT '[]'",
 }
 
 CONTENT_FIELDS = [f for f in FIELDS if f not in ("id", "fetched_at", "status")]
@@ -116,6 +120,8 @@ class Store:
         for f in FIELDS:            # v0.2 及更早构造的记录没有卷期字段：按 null 处理
             row.setdefault(f, None)
         row["keywords"] = json.dumps(rec["keywords"], ensure_ascii=False)
+        row["disease_tags"] = json.dumps(rec.get("disease_tags") or [], ensure_ascii=False)
+        row["country_iso3"] = json.dumps(rec.get("country_iso3") or [], ensure_ascii=False)
         row["figures_allowed"] = int(bool(rec["figures_allowed"]))
         row["authors"] = json.dumps(rec["authors"], ensure_ascii=False) if rec.get("authors") else None
         return row
@@ -124,6 +130,8 @@ class Store:
     def _from_row(row: sqlite3.Row) -> dict:
         rec = {f: row[f] for f in FIELDS}
         rec["keywords"] = json.loads(rec["keywords"])
+        rec["disease_tags"] = json.loads(rec["disease_tags"] or "[]")
+        rec["country_iso3"] = json.loads(rec["country_iso3"] or "[]")
         rec["figures_allowed"] = bool(rec["figures_allowed"])
         rec["authors"] = json.loads(rec["authors"]) if rec["authors"] else None
         return rec

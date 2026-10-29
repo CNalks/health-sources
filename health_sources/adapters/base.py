@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 from .. import keywords as kw
+from .. import tags as tagmod
 from ..util import clean_summary, make_id, normalize_doi, normalize_url, strip_html
 
 
@@ -30,7 +31,7 @@ def make_record(
     doi = normalize_doi(doi)
     url = normalize_url(url)
     title = strip_html(title)
-    return {
+    rec = {
         # id_from: url 的来源用规范化 URL 做 id（DOI 可能晚到时避免同一篇变两条）
         "id": make_id(None if cfg.get("id_from") == "url" else doi, url),
         "source": cfg["id"],
@@ -51,8 +52,11 @@ def make_record(
         "pmcid": None,
         "enriched_at": None,
         "enrich_source": None,
+        "disease_tags": [],
+        "country_iso3": [],
         **_meta(meta),
     }
+    return tagmod.apply_tags(rec)
 
 
 META_FIELDS = ("journal", "volume", "issue", "pages", "article_type", "authors", "issue_order", "feed_url")
