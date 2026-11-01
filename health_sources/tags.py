@@ -2,7 +2,7 @@
 
 词表权威在 CDC-Weekly-Digest/data/vocab/diseases.json，本库不维护第二份词表。
 加载顺序：环境变量 HS_VOCAB_DISEASES → 同级/部署路径候选 → 找不到则 disease_tags 一律 []。
-国家标签不依赖 regions 词表，用内置别名 +（可选）pycountry。
+国家标签不依赖 regions 词表，用内置别名 + pycountry（requirements 已列；缺失时只剩别名）。
 """
 from __future__ import annotations
 
