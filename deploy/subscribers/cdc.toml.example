@@ -8,8 +8,8 @@ batch_size = 100
 max_requests_per_run = 40  # 首次全量约 15 次请求
 max_body_bytes = 90000     # CloudBase HTTP 访问服务：文本类请求体上限 100KB（EXCEED_MAX_PAYLOAD_SIZE）
 
-# 与 CloudBase hs-ingest SOURCES 对齐；新闻源 / 新增 GHS 源不得推上去（否则 source not allowed）。
-allowed_sources = ["cdc_weekly", "mmwr", "eid", "eurosurveillance", "plos_ntds", "who_don", "ecdc"]
+# 与 CloudBase hs-ingest SOURCES 对齐：5 个文章源 + 8 个独立疫情通报源。先部署接收端，再扩展实际订阅配置。
+allowed_sources = ["cdc_weekly", "mmwr", "eid", "eurosurveillance", "plos_ntds", "who_don", "ecdc", "cdc_thn", "cdc_han", "hk_chp", "paho", "africa_cdc", "ukhsa"]
 # CloudBase FIELDS 不含标签；推送前丢掉，避免 field not allowed。
 drop_fields = ["disease_tags", "country_iso3"]
 
